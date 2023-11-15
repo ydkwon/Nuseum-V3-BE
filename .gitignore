@@ -1,0 +1,17 @@
+.DS_Store
+db.sqlite3
+*.log
+*.pot
+*.pyc
+__pycache__/
+
+# secret key
+socket_port.json
+secrets.json
+naver_cloud_sens.json
+
+# virtual env
+myvenv/
+
+# deploy
+migrations/
