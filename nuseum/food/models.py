@@ -26,31 +26,12 @@ class Food_List(models.Model):
     allergy_info = models.ForeignKey(User_Allergy, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='알러지')
     affliction_info = models.ManyToManyField(User_Affliction, blank=True, verbose_name='고민')
 
-    nutro_name1 = models.ForeignKey(Nutro_Name, on_delete=models.SET_NULL, 
-                                    null=True, blank=True, related_name='food_list_nutro_name1', verbose_name='영양성분1')
-    nutro_contents1 = models.CharField(max_length=5, blank=True, verbose_name='영양성분1의 함량')
-
-    nutro_name2 = models.ForeignKey(Nutro_Name, on_delete=models.SET_NULL, 
-                                    null=True, blank=True, related_name='food_list_nutro_name2', verbose_name='영양성분2')
-    nutro_contents2 = models.CharField(max_length=5, blank=True, verbose_name='영양성분2의 함량')
-
-    nutro_name3 = models.ForeignKey(Nutro_Name, on_delete=models.SET_NULL,
-                                    null=True, blank=True, related_name='food_list_nutro_name3', verbose_name='영양성분3')
-    nutro_contents3 = models.CharField(max_length=5, blank=True, verbose_name='영양성분3의 함량')
-
-    nutro_name4 = models.ForeignKey(Nutro_Name, on_delete=models.SET_NULL, 
-                                    null=True, blank=True, related_name='food_list_nutro_name4', verbose_name='영양성분4')
-    nutro_contents4 = models.CharField(max_length=5, blank=True, verbose_name='영양성분4의 함량')
-
-    nutro_name5 = models.ForeignKey(Nutro_Name, on_delete=models.SET_NULL, 
-                                    null=True, blank=True, related_name='food_list_nutro_name5', verbose_name='영양성분5')
-    nutro_contents5 = models.CharField(max_length=5, blank=True, verbose_name='영양성분5의 함량')
+    nutro_name = models.ManyToManyField(Nutro_Name, blank=True, verbose_name='영양성분')
     
     def __str__(self):
         afflictions = ', '.join([str(affliction) for affliction in self.affliction_info.all()])
-        return f'{self.food_name} (Afflictions: {afflictions})'
-        # allergies = ', '.join([str(allergy) for allergy in self.user_allergy.all()])
-        # return f'{self.food_name} (Allergies: {allergies}, Afflictions: {afflictions})'
+        nutro_kind = ', '.join([str(nutro_kind) for nutro_kind in self.nutro_name.all()])
+        return f'{self.food_name} (Afflictions: {afflictions}, Nutro_Kind:{nutro_kind})'
     
     class Meta:
         db_table = "FOODLIST_TB"

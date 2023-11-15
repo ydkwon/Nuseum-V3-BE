@@ -9,23 +9,18 @@ class FoodList(admin.ModelAdmin):
         'food_info',
         'allergy_info',
         'display_afflictions',
-        'nutro_name1',
-        'nutro_contents1',
-        'nutro_name2',
-        'nutro_contents2',
-        'nutro_name3',
-        'nutro_contents3',
-        'nutro_name4',
-        'nutro_contents4',
-        'nutro_name5',
-        'nutro_contents5',
+        'display_nutrokind',
+        
     )
     def display_afflictions(self, obj):
         return ', '.join([str(affliction) for affliction in obj.affliction_info.all()])
     display_afflictions.short_description = '고민'  # 필드 이름
+
+    def display_nutrokind(self, obj):
+        return ', '.join([str(nutro_kind) for nutro_kind in obj.nutro_name.all()])
+    display_afflictions.short_description = '영양성분'  # 필드 이름
     
-    search_fields = ('food_category','food_name','food_info','allergy_info','display_afflictions','nutro_name1',
-        'nutro_contents1','nutro_name2','nutro_contents2', 'nutro_name3','nutro_contents3', 'nutro_name4','nutro_contents4', 'nutro_name5','nutro_contents5',)
+    search_fields = ('food_category','food_name','food_info','allergy_info','display_afflictions','display_nutrokind')
 
 class NutroName(admin.ModelAdmin):
     list_display = (
