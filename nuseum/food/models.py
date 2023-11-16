@@ -104,7 +104,7 @@ class User_Food_Recommend_List(models.Model):
 class Product_List(models.Model):
     product_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='제품이름')
     product_url = models.CharField(max_length=255, blank=True, null=True, verbose_name='제품주소')
-    product_kind = models.CharField(choices=Product_Kind, max_length=10, verbose_name="제품종류" )
+    product_kind = models.CharField(choices=Product_Kind, max_length=10, default='Null', verbose_name="제품종류" )
     market_id = models.ForeignKey(Food_Market, on_delete=models.SET_NULL,
                                     null=True, blank=True, verbose_name='마켓명')
     food_id = models.ManyToManyField(Food_List, blank=True, verbose_name='식품명')
