@@ -1,9 +1,13 @@
-.DS_Store
-db.sqlite3
-*.log
-*.pot
+
+# Django
+*.pyo
 *.pyc
+*.py~
+*.pyo
 __pycache__/
+*.db
+*.sqlite3
+*.log
 
 # secret key
 socket_port.json
