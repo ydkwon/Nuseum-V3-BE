@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from .choices import *
 from django.conf import settings
 from django.db import models
-from user_info.models import User_Affliction, User_Allergy
+from user_info.models import User_Affliction, User_Allergy, User_Card
 
 class Nutro_Name(models.Model):
     nutro_name = models.CharField(max_length=200, verbose_name='영양성분')
@@ -61,7 +61,7 @@ class Food_Market(models.Model):
 
 class User_Food_List(models.Model):
 
-    user_id_c = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='아이디')
+    user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
     food_category = models.CharField(choices=Food_Category, max_length=10, verbose_name='카테고리', null=True)
     
     list_rank = models.DecimalField(max_digits=5, decimal_places=0, null=True, 
@@ -69,6 +69,7 @@ class User_Food_List(models.Model):
     
     user_food_list = models.ForeignKey(Food_List, on_delete=models.SET_NULL, 
                                        null=True, blank=True, verbose_name='사용자 푸드 리스트')
+    user_food_use = models.BooleanField(default=False, verbose_name='사용자 푸드 구매 여부')
 
     def __str__(self):
         return str(self.user_id_c)
@@ -85,7 +86,7 @@ class User_Food_List(models.Model):
         self.delete()
 
 class User_Food_Recommend_List(models.Model):
-    user_id_c = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='아이디')
+    user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
     user_recommend_food_category = models.CharField(choices=Food_Category, max_length=10, verbose_name='카테고리', null=True)
     user_food_list = models.ForeignKey(Food_List, on_delete=models.SET_NULL, 
                                        null=True, blank=True, verbose_name='사용자 추천 푸드 리스트')

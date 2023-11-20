@@ -18,7 +18,7 @@ class FoodList(admin.ModelAdmin):
 
     def display_nutrokind(self, obj):
         return ', '.join([str(nutro_kind) for nutro_kind in obj.nutro_name.all()])
-    display_afflictions.short_description = '영양성분'  # 필드 이름
+    display_nutrokind.short_description = '영양성분'  # 필드 이름
     
     search_fields = ('food_category','food_name','food_info','allergy_info','display_afflictions','display_nutrokind')
 
@@ -53,8 +53,9 @@ class UserFoodList(admin.ModelAdmin):
         'food_category',
         'list_rank',
         'user_food_list',
+        'user_food_use',
     )
-    search_fields = ('user_id_c','food_category','list_rank','user_food_list')
+    search_fields = ('user_id_c','food_category','list_rank','user_food_list','user_food_use')
 
 
 admin.site.register(Nutro_Name, NutroName)
