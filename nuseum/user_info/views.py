@@ -3,7 +3,7 @@ import os, hmac, time, base64, requests
 
 from .serializers import *
 from account.models import User
-from .models import User_Card, User_Affliction, User_Allergy
+from .models import User_Card, User_Affliction, User_Incongruity
 
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
@@ -386,20 +386,20 @@ class UserInfo_Delete(APIView):
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class Allergy_Post(APIView):
+class Incongruity_Post(APIView):
     '''
-    사용자의 알러지 리스트를 추가하는 API
+    사용자의 부적합항목을 추가하는 API
     '''
     def post(self, request):
         try:
-            serializer = USerAllergySerializer(data=request.data)
-            allergy = request.data['allergy']
+            serializer = USerIncongruitySerializer(data=request.data)
+            incongruity = request.data['incongruity']
             
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             if serializer.is_valid():
-                user_allergy = serializer.save()
+                incongruity = serializer.save()
                 
                 return Response(
                     {
@@ -419,13 +419,13 @@ class Allergy_Post(APIView):
                 ) 
 
    
-class Allergy_Get(APIView):
+class Incongruity_Get(APIView):
     '''
     사용자의 알러지 리스트를 가져오는 API
     '''    
     def post(self,request):
         try:
-            result = User_Allergy.objects.all()
+            result = User_Incongruity.objects.all()
             return Response(
                 {
                     "message" : "User Allergy List Get Success",

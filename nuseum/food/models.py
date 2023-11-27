@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from .choices import *
 from django.conf import settings
 from django.db import models
-from user_info.models import User_Affliction, User_Allergy, User_Card
+from user_info.models import User_Affliction, User_Incongruity, User_Card
 
 class Nutro_Name(models.Model):
     nutro_name = models.CharField(max_length=200, verbose_name='영양성분')
@@ -13,7 +13,8 @@ class Nutro_Name(models.Model):
     class Meta:
         db_table = "Nutro_Name"
         verbose_name = "영양성분"
-        verbose_name_plural = "영양성분"       
+        verbose_name_plural = "영양성분"   
+        managed = True     
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -23,7 +24,7 @@ class Food_List(models.Model):
     food_name = models.CharField(max_length=100, verbose_name="식품명", null=True)    
     food_info = models.CharField(max_length=255, verbose_name="식품정보", null=True)
 
-    allergy_info = models.ForeignKey(User_Allergy, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='알러지')
+    incongruity_info = models.ForeignKey(User_Incongruity, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='부적합')
     affliction_info = models.ManyToManyField(User_Affliction, blank=True, verbose_name='고민')
 
     nutro_name = models.ManyToManyField(Nutro_Name, blank=True, verbose_name='영양성분')
@@ -36,7 +37,8 @@ class Food_List(models.Model):
     class Meta:
         db_table = "FOODLIST_TB"
         verbose_name = "푸드리스트"
-        verbose_name_plural = "푸드리스트"       
+        verbose_name_plural = "푸드리스트"    
+        managed = True    
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -54,6 +56,7 @@ class Food_Market(models.Model):
         db_table = "MARKETNAME_TB"
         verbose_name = "마켓리스트"
         verbose_name_plural = "마켓리스트"
+        managed = True 
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -78,6 +81,7 @@ class User_Food_List(models.Model):
         db_table = "USERFOOD_TB"
         verbose_name = "사용자푸드"
         verbose_name_plural = "사용자푸드" 
+        managed = True 
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -95,6 +99,7 @@ class User_Food_Recommend_List(models.Model):
         db_table = "USERRECFOOD_TB"
         verbose_name = "사용자추천푸드"
         verbose_name_plural = "사용자추천푸드" 
+        managed = True 
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -117,6 +122,7 @@ class Product_List(models.Model):
         db_table = "PRODUCTLIST_TB"
         verbose_name = "제품리스트"
         verbose_name_plural = "제품리스트"
+        managed = True 
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -129,6 +135,7 @@ class User_Product_Recommend_List(models.Model):
         db_table = "USERRECPRODUCT_TB"
         verbose_name = "사용자추천제품"
         verbose_name_plural = "사용자추천제품" 
+        managed = True 
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

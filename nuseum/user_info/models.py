@@ -13,21 +13,22 @@ class User_Affliction(models.Model):
         db_table = "USERAFFLICTION_TB"
         verbose_name = "사용자 고민"
         verbose_name_plural = "사용자 고민"  
-        managed = False     
+        managed = True     
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
-class User_Allergy(models.Model):
-    allergy = models.CharField(max_length=100, verbose_name="알러지", default='None')
+class User_Incongruity(models.Model):
+    incongruity = models.CharField(max_length=100, verbose_name="부적합", default='None')
 
     def __str__(self):
-        return str(self.allergy)
+        return str(self.incongruity)
 
     class Meta:
-        db_table = "USERALLERGY_TB"
-        verbose_name = "알러지"
-        verbose_name_plural = "알러지"       
+        db_table = "USERINCONGRUITY_TB"
+        verbose_name = "부적합"
+        verbose_name_plural = "부적합"       
+        managed = True     
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -42,18 +43,19 @@ class User_Card(models.Model):
     user_height = models.CharField(max_length=3, verbose_name="사용자 신장", null=True)
     user_weight = models.CharField(max_length=3, verbose_name="사용자 몸무게", null=True)
 
-    user_allergy = models.ManyToManyField(User_Allergy, blank=True, verbose_name='사용자 알러지')
+    user_incongruity = models.ManyToManyField(User_Incongruity, blank=True, verbose_name='사용자 부적합')
     user_affliction = models.ManyToManyField(User_Affliction, blank=True, verbose_name='사용자 고민')
 
     def __str__(self):
-        allergies = ', '.join([str(allergy) for allergy in self.user_allergy.all()])
+        incongruity = ', '.join([str(incongruity) for incongruity in self.user_incongruity.all()])
         afflictions = ', '.join([str(affliction) for affliction in self.user_affliction.all()])
-        return f'{self.card_nickname} (Allergies: {allergies}, Afflictions: {afflictions})'
+        return f'{self.card_nickname} (Incongruity: {incongruity}, Afflictions: {afflictions})'
     
     class Meta:
         db_table = "USERCARD_TB"
         verbose_name = "사용자 카드"
         verbose_name_plural = "사용자 카드"       
+        managed = True     
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

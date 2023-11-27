@@ -1,13 +1,13 @@
 from django.contrib import admin
 from .models import Food_List, Nutro_Name,Food_Market, Product_List, User_Food_List
-from user_info.models import User_Allergy, User_Affliction
+from user_info.models import User_Incongruity, User_Affliction
 
 class FoodList(admin.ModelAdmin):
     list_display = (
         'food_category',
         'food_name',
         'food_info',
-        'allergy_info',
+        'incongruity_info',
         'display_afflictions',
         'display_nutrokind',
         
@@ -20,7 +20,7 @@ class FoodList(admin.ModelAdmin):
         return ', '.join([str(nutro_kind) for nutro_kind in obj.nutro_name.all()])
     display_nutrokind.short_description = '영양성분'  # 필드 이름
     
-    search_fields = ('food_category','food_name','food_info','allergy_info','display_afflictions','display_nutrokind')
+    search_fields = ('food_category','food_name','food_info','incongruity_info','display_afflictions','display_nutrokind')
 
 class NutroName(admin.ModelAdmin):
     list_display = (

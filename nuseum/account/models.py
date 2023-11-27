@@ -79,6 +79,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         db_table = "nuseum_user"
         verbose_name = "모든 사용자"
         verbose_name_plural = "모든 사용자"
+        managed = True 
 
 class AuthSMS(TimeStampedModel):
     '''
