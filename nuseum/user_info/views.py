@@ -404,14 +404,14 @@ class Incongruity_Post(APIView):
                 return Response(
                     {
                         "code" : "0000",
-                        "message": "User Allergy Save OK"
+                        "message": "User Incongruity Save OK"
                     },
                     status=status.HTTP_200_OK,
                 )
             else:
                 return Response(
                     {
-                        "message" : "User Allergy Save Fail",
+                        "message" : "User Incongruity Save Fail",
                         "code" : "1010",
                         "detail" : serializer.errors,
                     },
@@ -421,14 +421,14 @@ class Incongruity_Post(APIView):
    
 class Incongruity_Get(APIView):
     '''
-    사용자의 알러지 리스트를 가져오는 API
+    사용자의 부적합 리스트를 가져오는 API
     '''    
     def post(self,request):
         try:
             result = User_Incongruity.objects.all()
             return Response(
                 {
-                    "message" : "User Allergy List Get Success",
+                    "message" : "User Incongruity List Get Success",
                     "code" : "0000",
                     "detail" : result.values()
                 },
@@ -438,7 +438,7 @@ class Incongruity_Get(APIView):
         except KeyError:
             return Response(
                     {
-                        "message" : "User Allergy List Get Fail",
+                        "message" : "User Incongruity List Get Fail",
                         "code" : "1011",                        
                     },
                     status=status.HTTP_400_BAD_REQUEST,
