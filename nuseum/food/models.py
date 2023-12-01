@@ -70,10 +70,11 @@ class User_Food_List(models.Model):
     list_rank = models.DecimalField(max_digits=5, decimal_places=0, null=True, 
                                     blank=True, verbose_name='푸드리스트 순위', help_text='사용자 카드의 고민에 따른 푸드의 전체 리스트')
     
-    user_food_list = models.ForeignKey(Food_List, on_delete=models.SET_NULL, 
-                                       null=True, blank=True, verbose_name='사용자 푸드 리스트')
-    user_food_use = models.BooleanField(default=False, verbose_name='사용자 푸드 구매 여부')
-
+    # # user_food_list = models.ForeignKey(Food_List, on_delete=models.SET_NULL, 
+    #                                    null=True, blank=True, verbose_name='사용자 푸드 리스트')
+    
+    user_food_list = models.ManyToManyField(Food_List, through='UserFoodPurchase', blank=True, verbose_name='사용자 푸드 리스트')
+    
     def __str__(self):
         return str(self.user_id_c)
     
@@ -88,6 +89,20 @@ class User_Food_List(models.Model):
 
     def delete_card(self):
         self.delete()
+
+class UserFoodPurchase(models.Model):
+    user_food_list = models.ForeignKey(User_Food_List, on_delete=models.CASCADE, verbose_name='사용자 푸드 리스트')
+    food = models.ForeignKey(Food_List, on_delete=models.CASCADE, verbose_name='푸드')
+    user_food_use = models.BooleanField(default=False, verbose_name='사용자 푸드 구매 여부')
+
+    class Meta:
+        db_table = "USERFOODPURCHASE_TB"  # 테이블 이름 설정
+        verbose_name = "사용자 푸드 구매"  # 단일 항목 표시 이름
+        verbose_name_plural = "사용자 푸드 구매 리스트"  # 복수 항목 표시 이름
+        managed = True 
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
 class User_Food_Recommend_List(models.Model):
     user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
@@ -143,35 +158,4 @@ class User_Product_Recommend_List(models.Model):
     def delete_card(self):
         self.delete()
 
-
-# class Food_List(models.Model):
-#     food_category = models.CharField(choices=Food_Category, max_length=10, verbose_name='카테고리', null=True)
-#     food_name = models.CharField(max_length=100, verbose_name="식품명", null=True)    
-#     food_info = models.CharField(max_length=255, verbose_name="식품정보", null=True)
-
-#     allergy_info = models.ForeignKey(User_Allergy, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='알러지포함여부')
-#     affliction_info = models.ManyToManyField(User_Affliction, blank=True, verbose_name='고민해당식품여부')
-#     nutro_info = models.ManyToManyField(Nutro_Name, through='NutroContent', blank=True, verbose_name='영양성분 정보')
-
-#     def __str__(self):
-#         afflictions = ', '.join([str(affliction) for affliction in self.affliction_info.all()])
-#         nutro_infos = ', '.join([str(nutro) for nutro in self.nutro_info.all()])
-#         return f'{self.food_name} (Afflictions: {afflictions}, Nutro_infos : {nutro_infos})'
     
-#     class Meta:
-#         db_table = "FOODLIST_TB"
-#         verbose_name = "푸드리스트"
-#         verbose_name_plural = "푸드리스트"       
-
-#     def save(self, *args, **kwargs):
-#         super().save(*args, **kwargs)
-
-# class NutroContent(models.Model):
-#     food = models.ForeignKey(Food_List, on_delete=models.CASCADE)
-#     nutro = models.ForeignKey(Nutro_Name, on_delete=models.CASCADE)
-#     contents = models.CharField(max_length=5, verbose_name='영양성분의 함량')
-
-#     class Meta:
-#         db_table = "NutroContent"
-#         verbose_name = "영양성분내용"
-#         verbose_name_plural = "영양성분내용"       

@@ -1,69 +1,108 @@
+import jwt, json
+import os, hmac, time, base64, requests
+
+# from .serializers import *
+# from django.conf import settings
+from django.contrib.auth import authenticate, get_user_model
+
+# choices.py 파일에서 Food_Category 가져오기
+from .choices import Food_Category
+
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .models import User_Food_List, Food_List
-from user_info.models import User_Affliction
+from user_info.models import User_Card, User_Affliction, User_Incongruity
+from account.models import User
+
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
+from django.db import transaction  # 트랜잭션 처리를 위한 import 추가
 
-@csrf_exempt  # For simplicity. Consider using CSRF protection in a real project.
-@require_POST
-def save_food_to_user_list(request):
+def get_user_pk_by_userid(userid):
+    User = get_user_model()
     try:
-        # Get food_id from the request, adjust as needed
-        food_id = request.POST.get('food_id')
-        
-        # Get the Food_List object
-        food = get_object_or_404(Food_List, id=food_id)
-        
-        # Get the authenticated user, assuming you have user authentication in place
-        user = request.user
-        
-        # Check if the user already has this food in their list
-        existing_user_food = User_Food_List.objects.filter(user_id_c=user, user_food_list=food).exists()
-        
-        if not existing_user_food:
-            # Create a new User_Food_List entry
-            user_food = User_Food_List(user_id_c=user, user_food_list=food, user_food_use=False)
-            user_food.save()
+        user = User.objects.get(user_id=userid)
+        return user.pk
+    except User.DoesNotExist:
+        return None
+
+class User_Recommend(APIView):
+
+    def post(self, request):
+        try:
+            # 사용자 ID 및 PK 가져오기
+            userid = request.data.get('user_id')
+            user_pk = get_user_pk_by_userid(userid)
+
+            user_card = request.data.get('user_card')            
+
+            # 부적합한 항목 가져오기
+            user_incongruity = User_Card.objects.get(id=user_card).user_incongruity.all()
+
+            # 사용자의 고민 항목 가져오기
+            user_afflictions = User_Card.objects.get(id=user_card).user_affliction.all()
+
+            # 부적합한 항목을 제외한 푸드 리스트 가져오기
+            food_list = Food_List.objects.exclude(incongruity_info__in=user_incongruity)
+
+            # 사용자의 푸드 리스트를 담을 변수 초기화
+            accumulated_food_list = []
+
+            # 각 고민에 대한 푸드 리스트 누적
+            for affliction in user_afflictions:
+                # # 부적합한 항목을 제외한 푸드 리스트 가져오기
+                # food_list = Food_List.objects.exclude(incongruity_info__in=user_incongruity)
+
+                # 사용자의 고민에 맞는 푸드 리스트 필터링
+                food_list = food_list.filter(affliction_info=affliction)
+                print(food_list)
+
+                # 누적된 푸드 리스트에 추가
+                accumulated_food_list.extend(food_list)
             
-            return JsonResponse({'success': True, 'message': 'Food added to user list successfully'})
-        else:
-            return JsonResponse({'success': False, 'message': 'Food already exists in the user list'})
-    
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
+            # 여기서 사용자 푸드 리스트 모델에 저장하는 부분 추가
+            with transaction.atomic():
+                # 각 고민에 대한 푸드 리스트를 저장할 빈 리스트
+                user_food_lists = []
+
+                # 각 고민에 대한 푸드 리스트 누적
+                for affliction in user_afflictions:
+                    # 부적합한 항목을 제외한 푸드 리스트 가져오기
+                    filtered_food_list = Food_List.objects.exclude(incongruity_info__in=user_incongruity)
+
+                    # 사용자의 고민에 맞는 푸드 리스트 필터링
+                    filtered_food_list = filtered_food_list.filter(affliction_info=affliction)
+
+                    # 누적된 푸드 리스트를 따로 저장
+                    user_food_lists.append(filtered_food_list)
+
+                # 각 카테고리별로 User_Food_List 생성 및 ManyToMany 필드에 푸드 리스트 추가
+                for category_code, category_name in Food_Category:
+                    # 각 고민에 대한 푸드 리스트에서 해당 카테고리의 푸드 리스트를 가져오기
+                    category_food_list = [food_list.filter(food_category=category_code) for food_list in user_food_lists]
+
+                    # 빈 리스트가 아닌 경우에만 저장
+                    if any(category_food_list):
+                        # 각 고민에 대한 User_Food_List 생성
+                        for food_list in category_food_list:
+                            if food_list.exists():
+                                user_food_list = User_Food_List.objects.create(
+                                    user_id_c=User_Card.objects.get(id=user_card),
+                                    food_category=category_code,
+                                    list_rank=1  # 순위 설정 (예시로 1 사용)
+                                    
+                                )
+                                user_food_list.user_food_list.set(food_list)
 
 
-def create_user_food_list(request, affliction_info_ids):
-    try:
-        # Get the User object
-        user = request.user
-        
-        # Get the Affliction_Info objects
-        affliction_infos = User_Affliction.objects.filter(id__in=affliction_info_ids)
-        
-        for affliction_info in affliction_infos:
-            # Get the Food_List objects with matching affliction_info
-            matching_foods = Food_List.objects.filter(affliction_info=affliction_info)
+            return Response({'message': 'Success', 'filtered_food_list': food_list}, status=status.HTTP_200_OK)
             
-            # Check if the user already has these foods in their list
-            existing_user_foods = User_Food_List.objects.filter(user_id_c=user, user_food_list__in=matching_foods).exists()
-            
-            if not existing_user_foods:
-                # Create User_Food_List entries for each matching food
-                for food in matching_foods:
-                    user_food = User_Food_List(
-                        user_id_c=user,
-                        food_category=food.food_category,
-                        user_food_list=food,
-                        user_food_use=False
-                    )
-                    user_food.save()
-                
-                return JsonResponse({'success': True, 'message': 'User food list created successfully'})
-            else:
-                return JsonResponse({'success': False, 'message': 'These foods already exist in the user list'})
-    
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)})
+        except KeyError:
+            return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
+ 

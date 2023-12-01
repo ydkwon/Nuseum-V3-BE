@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Food_List, Nutro_Name,Food_Market, Product_List, User_Food_List
+from .models import Food_List, Nutro_Name,Food_Market, Product_List, User_Food_List, UserFoodPurchase
 from user_info.models import User_Incongruity, User_Affliction
 
 class FoodList(admin.ModelAdmin):
@@ -47,15 +47,27 @@ class ProductList(admin.ModelAdmin):
 
     search_fields = ('product_name','product_url','market_id','display_foodid')
 
+class UserFoodPurchaseInline(admin.TabularInline):
+    model = UserFoodPurchase
+    extra = 1
+
 class UserFoodList(admin.ModelAdmin):
     list_display = (
         'user_id_c',
         'food_category',
         'list_rank',
-        'user_food_list',
-        'user_food_use',
+        'display_user_food_list',
+        # 'display_user_food_use',  # 이 부분은 더 이상 필요하지 않습니다.
     )
-    search_fields = ('user_id_c','food_category','list_rank','user_food_list','user_food_use')
+    search_fields = ('user_id_c', 'food_category', 'list_rank', 'user_food_list__food_name', 'user_food_use')
+
+    inlines = [UserFoodPurchaseInline]
+
+    def display_user_food_list(self, obj):
+        return ", ".join([str(food) for food in obj.user_food_list.all()])
+
+    display_user_food_list.short_description = 'User Food List'
+
 
 
 admin.site.register(Nutro_Name, NutroName)
