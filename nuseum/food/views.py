@@ -1,12 +1,11 @@
 import jwt, json
 import os, hmac, time, base64, requests
 
-# from .serializers import *
-# from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 
 # choices.py 파일에서 Food_Category 가져오기
 from .choices import Food_Category
+from .serializers import UserFoodListSerializer, UserFoodPurchaseSerializer
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -15,7 +14,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from .models import User_Food_List, Food_List
+from .models import User_Food_List, Food_List, User_Food_Recommend_List, UserFoodPurchase, Product_List, User_Product_Recommend_List
 from user_info.models import User_Card, User_Affliction, User_Incongruity
 from account.models import User
 
@@ -31,78 +30,254 @@ def get_user_pk_by_userid(userid):
     except User.DoesNotExist:
         return None
 
-class User_Recommend(APIView):
+class User_Recommend_FoodList(APIView):
 
     def post(self, request):
         try:
-            # 사용자 ID 및 PK 가져오기
-            userid = request.data.get('user_id')
-            user_pk = get_user_pk_by_userid(userid)
+            # userid = request.data.get('user_id')
+            user_card_id = request.data.get('user_card')            
 
-            user_card = request.data.get('user_card')            
+            user_incongruity = User_Card.objects.get(id=user_card_id).user_incongruity.all()
+            user_afflictions = User_Card.objects.get(id=user_card_id).user_affliction.all()
 
-            # 부적합한 항목 가져오기
-            user_incongruity = User_Card.objects.get(id=user_card).user_incongruity.all()
-
-            # 사용자의 고민 항목 가져오기
-            user_afflictions = User_Card.objects.get(id=user_card).user_affliction.all()
-
-            # 부적합한 항목을 제외한 푸드 리스트 가져오기
             food_list = Food_List.objects.exclude(incongruity_info__in=user_incongruity)
-
-            # 사용자의 푸드 리스트를 담을 변수 초기화
             accumulated_food_list = []
 
-            # 각 고민에 대한 푸드 리스트 누적
             for affliction in user_afflictions:
-                # # 부적합한 항목을 제외한 푸드 리스트 가져오기
-                # food_list = Food_List.objects.exclude(incongruity_info__in=user_incongruity)
+                food_list_for_affliction = food_list.filter(affliction_info=affliction)
+                accumulated_food_list.extend(food_list_for_affliction)
 
-                # 사용자의 고민에 맞는 푸드 리스트 필터링
-                food_list = food_list.filter(affliction_info=affliction)
-                print(food_list)
+            # 중복을 제거하고 리스트로 변환
+            accumulated_food_list = list(set(accumulated_food_list))
 
-                # 누적된 푸드 리스트에 추가
-                accumulated_food_list.extend(food_list)
-            
-            # 여기서 사용자 푸드 리스트 모델에 저장하는 부분 추가
             with transaction.atomic():
-                # 각 고민에 대한 푸드 리스트를 저장할 빈 리스트
-                user_food_lists = []
-
-                # 각 고민에 대한 푸드 리스트 누적
-                for affliction in user_afflictions:
-                    # 부적합한 항목을 제외한 푸드 리스트 가져오기
-                    filtered_food_list = Food_List.objects.exclude(incongruity_info__in=user_incongruity)
-
-                    # 사용자의 고민에 맞는 푸드 리스트 필터링
-                    filtered_food_list = filtered_food_list.filter(affliction_info=affliction)
-
-                    # 누적된 푸드 리스트를 따로 저장
-                    user_food_lists.append(filtered_food_list)
-
-                # 각 카테고리별로 User_Food_List 생성 및 ManyToMany 필드에 푸드 리스트 추가
                 for category_code, category_name in Food_Category:
-                    # 각 고민에 대한 푸드 리스트에서 해당 카테고리의 푸드 리스트를 가져오기
-                    category_food_list = [food_list.filter(food_category=category_code) for food_list in user_food_lists]
+                    category_food_list = [food for food in accumulated_food_list if food.food_category == category_code]
 
-                    # 빈 리스트가 아닌 경우에만 저장
-                    if any(category_food_list):
-                        # 각 고민에 대한 User_Food_List 생성
-                        for food_list in category_food_list:
-                            if food_list.exists():
-                                user_food_list = User_Food_List.objects.create(
-                                    user_id_c=User_Card.objects.get(id=user_card),
-                                    food_category=category_code,
-                                    list_rank=1  # 순위 설정 (예시로 1 사용)
-                                    
-                                )
-                                user_food_list.user_food_list.set(food_list)
-
-
-            return Response({'message': 'Success', 'filtered_food_list': food_list}, status=status.HTTP_200_OK)
+                    if category_food_list:
+                        # 기존에 추천된 푸드를 가져옴
+                        existing_user_food_list = User_Food_List.objects.filter(user_id_c=user_card_id, food_category=category_code).first()
+                        
+                        if not existing_user_food_list:
+                            user_food_list = User_Food_List.objects.create(
+                                user_id_c=User_Card.objects.get(id=user_card_id),
+                                food_category=category_code
+                            )                                                        
+                            user_food_list.user_food_list.clear()
+                            print(category_food_list )
+                            user_food_list.user_food_list.set(category_food_list)
+                            print("New user_food_list created")
+                        else:
+                            
+                            user_food_list = existing_user_food_list                            
+                            user_food_list.user_food_list.clear()
+                            user_food_list.user_food_list.add(*category_food_list )
+                            print(user_food_list)
+                            print("Existing user_food_list updated")                            
+                        
+            user_food_lists = User_Food_List.objects.filter(user_id_c=user_card_id)
+            
+            return Response({'message': 'Success'}, status=status.HTTP_200_OK)
             
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
- 
+class User_Food_Recommend(APIView):
+    def post(self, request):
+        try:
+            user_card_id = request.data.get('user_card')
+            
+            user_food_lists = User_Food_List.objects.filter(user_id_c=user_card_id)
+
+            with transaction.atomic():
+                for category_code, category_name in Food_Category:
+                    category_food_list = []
+
+                    for user_food_list in user_food_lists:
+
+                        print(f"user_food_list.food_category : category_code = {user_food_list.food_category,category_code }")
+
+                        if user_food_list.food_category == category_code:
+                            # 사용자가 사용한 음식 중에서 user_food_use가 True인 음식 가져오기
+                            used_foods = user_food_list.user_food_list.filter(userfoodpurchase__user_food_use=True)
+                            print(f"Used Foods =  {used_foods}")
+                            
+                            # 사용한 음식을 제외한 음식 가져오기
+                            available_foods = user_food_list.user_food_list.exclude(id__in=used_foods.values_list('id', flat=True))
+                            print(f"available_foods = {available_foods}")
+                            
+                            category_food_list.extend(available_foods)
+                        
+                        print(f"category_food_list = {category_food_list}")
+                        
+                     # 기존에 추천된 푸드를 가져오기
+                    existing_user_recommend_list = User_Food_Recommend_List.objects.filter(
+                        user_id_c=user_card_id, 
+                        user_recommend_food_category=category_code
+                    ).first()
+
+                    if not existing_user_recommend_list:
+                        user_recommend_foods = User_Food_Recommend_List.objects.create(
+                            user_id_c=User_Card.objects.get(id=user_card_id),
+                            user_recommend_food_category=category_code,
+                        )
+                        print(f"New user_recommend_foods created for category {category_code}")
+                    else:
+                        user_recommend_foods = existing_user_recommend_list
+                        print(f"Existing user_recommend_foods updated for category {category_code}")
+                    
+                    print(category_food_list)
+                    print("-------")
+                    print(user_recommend_foods)
+                    if category_food_list:
+                        print(f"User_Food_Recommend_List updated for category {category_code}")
+                        user_recommend_foods.user_food_list.set(category_food_list)
+                        
+                    else:
+                        print(f"No food available for category {category_code}")                    
+
+            return Response({'message': 'Success'}, status=status.HTTP_200_OK)
+
+        except KeyError:
+            return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
+
+        
+class Food_Use_Set(APIView):
+    
+    def post(self, request):
+        try:
+            user_card_id = request.data.get('user_card')
+            food_id = request.data.get('food_id')
+
+            # 사용자의 특정 푸드에 대한 UserFoodPurchase 객체 생성 또는 업데이트
+            user_food_purchase, created = UserFoodPurchase.objects.get_or_create(
+                user_food_list__user_id_c=user_card_id,
+                food_id=food_id,
+            )
+
+            # 사용자가 해당 푸드를 사용함으로 표시 (user_food_use를 True로 설정)
+            user_food_purchase.user_food_use = True
+            user_food_purchase.save()
+
+            return Response({'message': 'Success'}, status=status.HTTP_200_OK)
+
+        except KeyError:
+            return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
+
+class User_Recommend_ProductList(APIView):
+    def post(self, request):
+        try:
+            # user_id = request.data.get('user_id')
+            user_card_id = request.data.get('user_card')   
+
+            # User_Food_Recommend_List에서 해당 사용자의 추천 음식 카테고리 및 음식 리스트 조회
+            recommendations = User_Food_Recommend_List.objects.filter(
+                user_id_c=user_card_id
+            ).values_list('user_recommend_food_category', 'user_food_list__id')
+
+            for category, food_id in recommendations:
+                # Product_List에서 해당 음식이 있는 제품을 찾음
+                products_with_food = Product_List.objects.filter(
+                    food_id=food_id
+                )
+
+                # 찾은 제품을 User_Product_Recommend_List에 저장
+                for product in products_with_food:
+                    User_Product_Recommend_List.objects.create(
+                        user_id_c=User_Card.objects.get(id=user_card_id),
+                        rec_product_name=product
+                    )
+
+            return Response({'message': 'Success'}, status=status.HTTP_200_OK)
+
+        except KeyError:
+            return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+# # 상위 2개의 food_priority 값을 가진 푸드를 찾음
+#                     top_foods = user_food_list.user_food_list.order_by('food_priority')[:2]
+
+#                     # User_Food_Recommend_List에 저장
+#                     for top_food in top_foods:
+#                         # 여기서 추가: user_food_use 체크 부분
+#                         user_food_use = not top_food.userfoodpurchase_set.filter(user_food_use=True).exists()
+#                         User_Food_Recommend_List.objects.create(
+#                             user_id_c=User_Card.objects.get(id=user_card_id),
+#                             user_recommend_food_category=user_food_list.food_category,
+#                             user_food_list=top_food                            
+#                         )
+
+# class User_Recommend_FoodList(APIView):
+
+#     def post(self, request):
+#         try:
+#             # userid = request.data.get('user_id')
+#             user_card_id = request.data.get('user_card')            
+
+#             user_incongruity = User_Card.objects.get(id=user_card_id).user_incongruity.all()
+#             user_afflictions = User_Card.objects.get(id=user_card_id).user_affliction.all()
+
+#             food_list = Food_List.objects.exclude(incongruity_info__in=user_incongruity)
+#             accumulated_food_list = []
+
+#             for affliction in user_afflictions:
+#                 food_list_for_affliction = food_list.filter(affliction_info=affliction)
+#                 accumulated_food_list.extend(food_list_for_affliction)
+
+#             # 중복을 제거하고 리스트로 변환
+#             accumulated_food_list = list(set(accumulated_food_list))
+
+#             with transaction.atomic():
+#                 for category_code, category_name in Food_Category:
+#                     category_food_list = [food for food in accumulated_food_list if food.food_category == category_code]
+
+#                     if category_food_list:
+#                         # 기존에 추천된 푸드를 가져옴
+#                         existing_user_food_list = User_Food_List.objects.filter(user_id_c=user_card_id, food_category=category_code).first()
+                        
+#                         if not existing_user_food_list:
+#                             user_food_list = User_Food_List.objects.create(
+#                                 user_id_c=User_Card.objects.get(id=user_card_id),
+#                                 food_category=category_code
+#                             )                            
+#                             # filtered_category_food_list = [
+#                             #     food for food in category_food_list 
+#                             #     if not food.userfoodpurchase_set.filter(user_food_use=True).exists()
+#                             # ]
+#                             user_food_list.user_food_list.clear()
+#                             print(category_food_list )
+#                             user_food_list.user_food_list.set(category_food_list)
+#                             print("New user_food_list created")
+#                         else:
+                            
+#                             user_food_list = existing_user_food_list
+#                             # 여기서 수정: 제외할 푸드 및 user_food_use가 True인 푸드를 제외하고 추가
+#                             # filtered_category_food_list = [
+#                             #     food for food in category_food_list
+#                             #     if not food.userfoodpurchase_set.filter(user_food_use=True).exists()
+#                             # ]
+#                             user_food_list.user_food_list.clear()
+#                             user_food_list.user_food_list.add(*category_food_list )
+#                             print(user_food_list)
+#                             print("Existing user_food_list updated")                            
+
+#                         # # 상위 2개의 food_priority 값을 가진 푸드를 찾음
+#                         # top_foods = user_food_list.user_food_list.order_by('food_priority')[:2]
+
+#                         # # User_Food_Recommend_List에 저장
+#                         # for top_food in top_foods:
+#                         #     User_Food_Recommend_List.objects.create(
+#                         #         user_id_c=User_Card.objects.get(id=user_card_id),
+#                         #         user_recommend_food_category=category_code,
+#                         #         user_food_list=top_food
+#                         #     )
+                        
+#             user_food_lists = User_Food_List.objects.filter(user_id_c=user_card_id)
+#             # serializer = UserFoodListSerializer(user_food_lists, many=True)
+            
+#             return Response({'message': 'Success'}, status=status.HTTP_200_OK)
+#             # return Response({'message': 'Success', 'user_food_lists': serializer.data}, status=status.HTTP_200_OK)
+            
+#         except KeyError:
+#             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)

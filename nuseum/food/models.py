@@ -20,15 +20,18 @@ class Nutro_Name(models.Model):
         super().save(*args, **kwargs)
 
 class Food_List(models.Model):
-    food_category = models.CharField(choices=Food_Category, max_length=10, verbose_name='카테고리', null=True)
+    food_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='카테고리', null=True)
     food_name = models.CharField(max_length=100, verbose_name="식품명", null=True)    
     food_info = models.CharField(max_length=255, verbose_name="식품정보", null=True)
+    food_code = models.CharField(max_length=7, verbose_name="식품코드", null=True)
+    food_priority = models.CharField(max_length=5, verbose_name="식품우선순위", null=True)
+    food_ingredient = models.CharField(choices = Food_Ingredient, max_length=5, verbose_name='식품 재료 분류', null=True)
 
     incongruity_info = models.ForeignKey(User_Incongruity, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='부적합')
     affliction_info = models.ManyToManyField(User_Affliction, blank=True, verbose_name='고민')
 
     nutro_name = models.ManyToManyField(Nutro_Name, blank=True, verbose_name='영양성분')
-    
+
     def __str__(self):
         afflictions = ', '.join([str(affliction) for affliction in self.affliction_info.all()])
         nutro_kind = ', '.join([str(nutro_kind) for nutro_kind in self.nutro_name.all()])
@@ -65,13 +68,7 @@ class Food_Market(models.Model):
 class User_Food_List(models.Model):
 
     user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
-    food_category = models.CharField(choices=Food_Category, max_length=10, verbose_name='카테고리', null=True)
-    
-    list_rank = models.DecimalField(max_digits=5, decimal_places=0, null=True, 
-                                    blank=True, verbose_name='푸드리스트 순위', help_text='사용자 카드의 고민에 따른 푸드의 전체 리스트')
-    
-    # # user_food_list = models.ForeignKey(Food_List, on_delete=models.SET_NULL, 
-    #                                    null=True, blank=True, verbose_name='사용자 푸드 리스트')
+    food_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='카테고리', null=True)
     
     user_food_list = models.ManyToManyField(Food_List, through='UserFoodPurchase', blank=True, verbose_name='사용자 푸드 리스트')
     
@@ -94,6 +91,8 @@ class UserFoodPurchase(models.Model):
     user_food_list = models.ForeignKey(User_Food_List, on_delete=models.CASCADE, verbose_name='사용자 푸드 리스트')
     food = models.ForeignKey(Food_List, on_delete=models.CASCADE, verbose_name='푸드')
     user_food_use = models.BooleanField(default=False, verbose_name='사용자 푸드 구매 여부')
+    user_food_like = models.BooleanField(default=False, verbose_name='사용자 푸드 선호')
+    user_food_dislike = models.DecimalField(max_digits=5,decimal_places=0, null=True, blank=True, default=None, verbose_name='사용자 푸드 비선호')
 
     class Meta:
         db_table = "USERFOODPURCHASE_TB"  # 테이블 이름 설정
@@ -106,9 +105,8 @@ class UserFoodPurchase(models.Model):
 
 class User_Food_Recommend_List(models.Model):
     user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
-    user_recommend_food_category = models.CharField(choices=Food_Category, max_length=10, verbose_name='카테고리', null=True)
-    user_food_list = models.ForeignKey(Food_List, on_delete=models.SET_NULL, 
-                                       null=True, blank=True, verbose_name='사용자 추천 푸드 리스트')
+    user_recommend_food_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='카테고리', null=True)
+    user_food_list = models.ManyToManyField(Food_List, blank=True, verbose_name='사용자 추천 푸드 리스트')                                       
 
     class Meta:
         db_table = "USERRECFOOD_TB"
@@ -143,8 +141,9 @@ class Product_List(models.Model):
         super().save(*args, **kwargs)
 
 class User_Product_Recommend_List(models.Model):
-    user_id_c = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='아이디')
-
+    user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
+    rec_product_name = models.ForeignKey(Product_List, on_delete=models.SET_NULL, 
+                                       null=True, blank=True, verbose_name='사용자 추천 제품 리스트')
 
     class Meta:
         db_table = "USERRECPRODUCT_TB"
@@ -157,5 +156,3 @@ class User_Product_Recommend_List(models.Model):
 
     def delete_card(self):
         self.delete()
-
-    
