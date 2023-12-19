@@ -1,7 +1,7 @@
 # serializers.py
 
 from rest_framework import serializers
-from .models import User_Food_List, UserFoodPurchase, Food_List
+from .models import User_Food_List, UserFoodPurchase, Food_List, User_Product_Recommend_List, Product_List
 
 class FoodListSerializer(serializers.ModelSerializer):
     class Meta:
@@ -46,3 +46,13 @@ class UserFoodListSerializer(serializers.ModelSerializer):
             food_instance, _ = Food_List.objects.get_or_create(**food_data)
             UserFoodPurchase.objects.create(user_food_list=user_food_list, food=food_instance, **user_food_purchase_data)
         return user_food_list
+    
+class UserProductRecListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User_Product_Recommend_List
+        fields = '__all__'
+
+class ProductListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product_List
+        fields = '__all__'

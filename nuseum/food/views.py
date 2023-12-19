@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, get_user_model
 
 # choices.py 파일에서 Food_Category 가져오기
 from .choices import Food_Category
-from .serializers import UserFoodListSerializer, UserFoodPurchaseSerializer
+from .serializers import UserFoodListSerializer, UserFoodPurchaseSerializer, UserProductRecListSerializer, ProductListSerializer
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -30,8 +30,8 @@ def get_user_pk_by_userid(userid):
     except User.DoesNotExist:
         return None
 
+# 사용자 푸드 리스트 생성 API
 class User_Recommend_FoodList(APIView):
-
     def post(self, request):
         try:
             # userid = request.data.get('user_id')
@@ -82,6 +82,7 @@ class User_Recommend_FoodList(APIView):
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
+# 사용자 푸드 추천 API
 class User_Food_Recommend(APIView):
     def post(self, request):
         try:
@@ -93,22 +94,18 @@ class User_Food_Recommend(APIView):
                 for category_code, category_name in Food_Category:
                     category_food_list = []
 
-                    for user_food_list in user_food_lists:
-
-                        print(f"user_food_list.food_category : category_code = {user_food_list.food_category,category_code }")
+                    for user_food_list in user_food_lists:                       
 
                         if user_food_list.food_category == category_code:
                             # 사용자가 사용한 음식 중에서 user_food_use가 True인 음식 가져오기
                             used_foods = user_food_list.user_food_list.filter(userfoodpurchase__user_food_use=True)
-                            print(f"Used Foods =  {used_foods}")
+                            #  dislike food 가져오기
+                            dislike_food = user_food_list.user_food_list.filter(userfoodpurchase__user_food_dislike=True)
                             
                             # 사용한 음식을 제외한 음식 가져오기
-                            available_foods = user_food_list.user_food_list.exclude(id__in=used_foods.values_list('id', flat=True))
-                            print(f"available_foods = {available_foods}")
+                            available_foods = user_food_list.user_food_list.exclude(id__in=used_foods.values_list('id', flat=True)).exclude(id__in=dislike_food.values_list('id', flat=True))
                             
                             category_food_list.extend(available_foods)
-                        
-                        print(f"category_food_list = {category_food_list}")
                         
                      # 기존에 추천된 푸드를 가져오기
                     existing_user_recommend_list = User_Food_Recommend_List.objects.filter(
@@ -121,29 +118,31 @@ class User_Food_Recommend(APIView):
                             user_id_c=User_Card.objects.get(id=user_card_id),
                             user_recommend_food_category=category_code,
                         )
-                        print(f"New user_recommend_foods created for category {category_code}")
+                        print(user_recommend_foods)
+                    
                     else:
                         user_recommend_foods = existing_user_recommend_list
-                        print(f"Existing user_recommend_foods updated for category {category_code}")
-                    
-                    print(category_food_list)
-                    print("-------")
-                    print(user_recommend_foods)
+                                        
                     if category_food_list:
-                        print(f"User_Food_Recommend_List updated for category {category_code}")
                         user_recommend_foods.user_food_list.set(category_food_list)
-                        
                     else:
                         print(f"No food available for category {category_code}")                    
 
-            return Response({'message': 'Success'}, status=status.HTTP_200_OK)
+            result = User_Food_Recommend_List.objects.all()
+
+            return Response(
+                {
+                    'message': 'Success',
+                    "code" : "0000",
+                    "detail" : result.values()
+                }, status=status.HTTP_200_OK
+            )
 
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
-        
-class Food_Use_Set(APIView):
-    
+# food use set, food like set, food like count increase API        
+class Food_Use_Set(APIView):    
     def post(self, request):
         try:
             user_card_id = request.data.get('user_card')
@@ -157,9 +156,15 @@ class Food_Use_Set(APIView):
 
             # 사용자가 해당 푸드를 사용함으로 표시 (user_food_use를 True로 설정)
             user_food_purchase.user_food_use = True
+            user_food_purchase.user_food_like = True
+            user_food_purchase.user_food_like_cnt += 1 
             user_food_purchase.save()
 
-            return Response({'message': 'Success'}, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    'message': 'Success'
+                }, status=status.HTTP_200_OK
+            )
 
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
@@ -175,6 +180,8 @@ class User_Recommend_ProductList(APIView):
                 user_id_c=user_card_id
             ).values_list('user_recommend_food_category', 'user_food_list__id')
 
+            print(recommendations)
+
             for category, food_id in recommendations:
                 # Product_List에서 해당 음식이 있는 제품을 찾음
                 products_with_food = Product_List.objects.filter(
@@ -185,15 +192,46 @@ class User_Recommend_ProductList(APIView):
                 for product in products_with_food:
                     User_Product_Recommend_List.objects.create(
                         user_id_c=User_Card.objects.get(id=user_card_id),
+                        rec_product_category = product.product_category,
                         rec_product_name=product
                     )
-
-            return Response({'message': 'Success'}, status=status.HTTP_200_OK)
+            
+            result = User_Product_Recommend_List.objects.all()
+            serializer = UserProductRecListSerializer(result, many=True)  # 직렬화 클래스 사용
+            
+            return Response(
+                {
+                    'message': 'Success',
+                    "code" : "0000",
+                    "detail" : serializer.data
+                }, 
+                status=status.HTTP_200_OK
+            )
 
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
+class UserProductRecommendDetailAPIView(APIView):
+    def post(self, request, product_id):
+        try:
+             # get 메서드를 사용하여 단일 객체를 가져옵니다.
+            product = Product_List.objects.get(id=product_id)            
 
+            # 이제 해당 제품을 직렬화하여 JSON 응답으로 반환
+            serializer = ProductListSerializer(product)
+
+            return Response(
+                {
+                    'message': 'Success',
+                    "code" : "0000",
+                    "detail" : serializer.data
+                }, 
+                status=status.HTTP_200_OK
+            )
+
+        except KeyError:
+            return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)    
+        
 
 # # 상위 2개의 food_priority 값을 가진 푸드를 찾음
 #                     top_foods = user_food_list.user_food_list.order_by('food_priority')[:2]
@@ -209,7 +247,6 @@ class User_Recommend_ProductList(APIView):
 #                         )
 
 # class User_Recommend_FoodList(APIView):
-
 #     def post(self, request):
 #         try:
 #             # userid = request.data.get('user_id')

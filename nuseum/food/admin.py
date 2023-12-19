@@ -41,6 +41,8 @@ class ProductList(admin.ModelAdmin):
     list_display =(
         'product_name',
         'product_url',
+        'product_kind',
+        'product_category',
         'market_id',
         'display_foodid',
     )
@@ -48,7 +50,7 @@ class ProductList(admin.ModelAdmin):
         return ', '.join([str(foodid) for foodid in obj.food_id.all()])
     display_foodid.short_description = '식품명'  # 필드 이름
 
-    search_fields = ('product_name','product_url','market_id','display_foodid')
+    search_fields = ('product_name','product_url','product_kind','product_category','market_id','display_foodid')
 
 class UserFoodPurchaseInline(admin.TabularInline):
     model = UserFoodPurchase
@@ -79,8 +81,10 @@ class UserFoodRecommendListAdmin(admin.ModelAdmin):
 
 @admin.register(User_Product_Recommend_List)
 class UserProductRecommendListAdmin(admin.ModelAdmin):
-    list_display = ('user_id_c', 'rec_product_name')
-    search_fields = ('user_id_c__username', 'rec_product_name__product_name')
+    list_display = ('user_id_c', 'rec_product_category', 'rec_product_name')
+    search_fields = ('user_id_c__username', 'rec_product_category', 'rec_product_name__product_name')
+    # list_display = ('user_id_c', 'rec_product_name', 'food_id')
+    # search_fields = ('user_id_c__username', 'rec_product_name__product_name', 'food_id__product_name')
 
 admin.site.register(Nutro_Name, NutroName)
 admin.site.register(Food_Market, MarketName)

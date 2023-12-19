@@ -90,9 +90,15 @@ class User_Food_List(models.Model):
 class UserFoodPurchase(models.Model):
     user_food_list = models.ForeignKey(User_Food_List, on_delete=models.CASCADE, verbose_name='사용자 푸드 리스트')
     food = models.ForeignKey(Food_List, on_delete=models.CASCADE, verbose_name='푸드')
+    # use flag체크 조건 : 사용자 구매 후 used 체크
     user_food_use = models.BooleanField(default=False, verbose_name='사용자 푸드 구매 여부')
+    # 선호 체크 조건 : 사용자 구매 시 선호 체크
     user_food_like = models.BooleanField(default=False, verbose_name='사용자 푸드 선호')
-    user_food_dislike = models.DecimalField(max_digits=5,decimal_places=0, null=True, blank=True, default=None, verbose_name='사용자 푸드 비선호')
+    # 비선호 체크 조건 : 비선호 카운트가 일정 카운트에 도달 시.
+    user_food_dislike = models.BooleanField(default=False, verbose_name='사용자 푸드 비선호')
+    
+    user_food_like_cnt = models.DecimalField(max_digits=5,decimal_places=0, null=True, blank=True, default=None, verbose_name='사용자 푸드 선호 카운트')
+    user_food_dislike_cnt = models.DecimalField(max_digits=5,decimal_places=0, null=True, blank=True, default=None, verbose_name='사용자 푸드 비선호 카운트')
 
     class Meta:
         db_table = "USERFOODPURCHASE_TB"  # 테이블 이름 설정
@@ -124,6 +130,7 @@ class Product_List(models.Model):
     product_name = models.CharField(max_length=255, blank=True, null=True, verbose_name='제품이름')
     product_url = models.CharField(max_length=255, blank=True, null=True, verbose_name='제품주소')
     product_kind = models.CharField(choices=Product_Kind, max_length=10, default='Null', verbose_name="제품종류" )
+    product_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='카테고리', null=True)
     market_id = models.ForeignKey(Food_Market, on_delete=models.SET_NULL,
                                     null=True, blank=True, verbose_name='마켓명')
     food_id = models.ManyToManyField(Food_List, blank=True, verbose_name='식품명')
@@ -142,8 +149,11 @@ class Product_List(models.Model):
 
 class User_Product_Recommend_List(models.Model):
     user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
+    rec_product_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='카테고리', null=True)
     rec_product_name = models.ForeignKey(Product_List, on_delete=models.SET_NULL, 
                                        null=True, blank=True, verbose_name='사용자 추천 제품 리스트')
+    # food_id = models.ForeignKey(Product_List, on_delete=models.SET_NULL,
+    #                             null=True, blank=True, verbose_name='식품명')
 
     class Meta:
         db_table = "USERRECPRODUCT_TB"
