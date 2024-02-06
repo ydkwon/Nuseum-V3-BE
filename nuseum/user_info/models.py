@@ -3,31 +3,48 @@ from django.conf import settings
 from django.db import models
 
 class User_Affliction(models.Model):
-    affliction = models.CharField(max_length=200, default='None', verbose_name='고민')
-    affliction_detail = models.CharField(max_length=200, verbose_name='고민상세',default='None') 
+    affliction = models.CharField(max_length=200, default='None', verbose_name='긍정')
+    affliction_detail = models.CharField(max_length=200, verbose_name='긍정 상세',default='None') 
 
     def __str__(self):
         return str(self.affliction)
 
     class Meta:
         db_table = "USERAFFLICTION_TB"
-        verbose_name = "사용자 고민"
-        verbose_name_plural = "사용자 고민"  
+        verbose_name = "긍정"
+        verbose_name_plural = "긍정"  
         managed = True     
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
 class User_Incongruity(models.Model):
-    incongruity = models.CharField(max_length=100, verbose_name="부적합", default='None')
+    incongruity = models.CharField(max_length=100, verbose_name="부정", default='None')
+    incongruity_detail = models.CharField(max_length=200, verbose_name='부정 상세',default='None') 
 
     def __str__(self):
         return str(self.incongruity)
 
     class Meta:
         db_table = "USERINCONGRUITY_TB"
-        verbose_name = "부적합"
-        verbose_name_plural = "부적합"       
+        verbose_name = "부정"
+        verbose_name_plural = "부정"       
+        managed = True     
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+class User_Allergy(models.Model):
+    allergy = models.CharField(max_length=100, verbose_name="알러지", default='None')
+    allergy_detail = models.CharField(max_length=200, verbose_name='알러지 상세',default='None') 
+
+    def __str__(self):
+        return str(self.allergy)
+
+    class Meta:
+        db_table = "USERALLERGY_TB"
+        verbose_name = "알러지"
+        verbose_name_plural = "알러지"       
         managed = True     
 
     def save(self, *args, **kwargs):

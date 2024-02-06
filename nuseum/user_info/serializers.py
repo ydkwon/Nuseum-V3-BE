@@ -1,4 +1,4 @@
-from .models import User_Card, User_Affliction, User_Incongruity
+from .models import User_Card, User_Affliction, User_Incongruity, User_Allergy
 from rest_framework import serializers
 
 class UserInfoSerializer(serializers.ModelSerializer):
@@ -20,4 +20,8 @@ class USerIncongruitySerializer(serializers.ModelSerializer):
         model = User_Incongruity
         # fields = ['allergy',]    
         fields = '__all__'
-   
+
+class UserAllergySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User_Allergy
+        fields = '__all__'

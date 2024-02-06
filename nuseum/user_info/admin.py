@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User_Card, User_Affliction, User_Incongruity
+from .models import User_Card, User_Affliction, User_Incongruity, User_Allergy
 
 class UserInfoAdmin(admin.ModelAdmin):
     list_display = (
@@ -32,10 +32,19 @@ class UserAfflictionAdmin(UserInfoAdmin):
 
 class UserIncongruityAdmin(UserInfoAdmin):
     list_display = (
-        'incongruity',        
+        'incongruity',
+        'incongruity_detail',
     )
-    search_fields = ('incongruity',)
+    search_fields = ('incongruity','incongruity_detail',)
+
+class UserAllergyAdmin(UserInfoAdmin):
+    list_display = (
+        'allergy',
+        'allergy_detail',
+    )
+    search_fields = ('allergy','allergy_detail',)
 
 admin.site.register(User_Affliction, UserAfflictionAdmin)
 admin.site.register(User_Incongruity, UserIncongruityAdmin)
+admin.site.register(User_Allergy, UserAllergyAdmin)
 admin.site.register(User_Card, UserInfoAdmin)

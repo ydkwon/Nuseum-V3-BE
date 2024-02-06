@@ -21,4 +21,5 @@ urlpatterns = [
     path('account/', include('account.urls')), # account 앱의 urls.py를 포함시킵니다.   
     path('user_info/', include('user_info.urls')), # user_info 앱의 urls.py를 포함시킵니다.
     path('food/', include('food.urls')),  # food 앱의 urls.py를 포함시킵니다.
+    path('record/', include('record.urls')),  # food 앱의 urls.py를 포함시킵니다.
 ]

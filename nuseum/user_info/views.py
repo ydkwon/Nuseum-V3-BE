@@ -385,6 +385,62 @@ class UserInfo_Delete(APIView):
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
+class Allergy_Post(APIView):
+    '''
+    사용자의 알러지 항목을 추가하는 API
+    '''
+    def post(self, request):
+        try:
+            serializer = UserAllergySerializer(data=request.data)
+            allergy = request.data['allergy']
+            
+        except KeyError:
+            return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            if serializer.is_valid():
+                allergy = serializer.save()
+                
+                return Response(
+                    {
+                        "code" : "0000",
+                        "message": "User Allergy Save OK"
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                return Response(
+                    {
+                        "message" : "User Allergy Save Fail",
+                        "code" : "1010",
+                        "detail" : serializer.errors,
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                ) 
+
+class Allergy_Get(APIView):
+    '''
+    사용자의 알러지 리스트를 가져오는 API
+    '''    
+    def post(self,request):
+        try:
+            result = User_Allergy.objects.all()
+            return Response(
+                {
+                    "message" : "User Allergy List Get Success",
+                    "code" : "0000",
+                    "detail" : result.values()
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except KeyError:
+            return Response(
+                    {
+                        "message" : "User Allergy List Get Fail",
+                        "code" : "1011",                        
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                ) 
 
 class Incongruity_Post(APIView):
     '''

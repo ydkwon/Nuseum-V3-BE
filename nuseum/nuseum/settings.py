@@ -58,6 +58,7 @@ INSTALLED_APPS += [
     'user_info.apps.UserInfoConfig',
     'food.apps.FoodConfig',
     'recipe.apps.RecipeConfig',
+    'record.apps.RecordConfig',
 ]
 
 MIDDLEWARE = [
