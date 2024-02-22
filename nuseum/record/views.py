@@ -16,8 +16,8 @@ class User_Record_set(APIView):
 # USER Food Record Set
 
     def post(self, request):
-        user_card_id = request.data.get('user_card')
-        serializer = UserRecordListSerializer(data=request.data)
+        user_card_id = request.data.get('user_card_id')
+        serializer = UserRecordListSaveSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -33,9 +33,15 @@ class User_Record_get(APIView):
         if not user_records.exists():
             return Response({'error': 'No records found for the given user card ID'}, status=status.HTTP_404_NOT_FOUND)
 
-        serializer = UserRecordListSerializer(user_records, many=True)
+        serializer = UserRecordListGetSerializer(user_records, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class User_Day_Analysis_get(APIView):
+    def post(self, request):
+
+
+class User_Month_Analysis_get(APIView):
+    def post(self, request):
 
         #     # 외부 API 함수를 호출하여 userid를 User 모델의 pk로 변환합니다.
         #     userid = request.data.get('user_id')

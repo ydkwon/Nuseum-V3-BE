@@ -9,6 +9,7 @@ class Nutro_Name(models.Model):
     incongruity_info = models.ManyToManyField(User_Incongruity, blank=True, verbose_name='부정')
     allergy_info = models.ManyToManyField(User_Allergy, blank=True, verbose_name='알러지')
     affliction_info = models.ManyToManyField(User_Affliction, blank=True, verbose_name='긍정')
+    nutro_detail = models.CharField(max_length=200, verbose_name='영양정보 상세',default='None')
 
     def __str__(self):
         return str(self.nutro_name)
@@ -28,8 +29,8 @@ class Food_List(models.Model):
     food_info = models.CharField(max_length=255, verbose_name="대표식품명", null=True)
     food_ingredient = models.CharField(choices = Food_Ingredient, max_length=5, verbose_name='재료분류', null=True)
     food_code = models.CharField(max_length=7, verbose_name="식품코드", blank=True, null=True)
-    food_priority = models.CharField(max_length=5, verbose_name="분류", blank=True, null=True)    
-
+    food_priority = models.CharField(max_length=5, verbose_name="분류", blank=True, null=True)
+    food_nutro = models.CharField(max_length=100, verbose_name=" 식품성분내용", null=True, default='None')    
     nutro_name = models.ManyToManyField(Nutro_Name, blank=True, verbose_name='성분내용')    
 
     def __str__(self):
@@ -52,7 +53,7 @@ class Food_Effect(models.Model):
     food_name = models.ForeignKey(Food_List, on_delete=models.CASCADE, related_name='food_effects', verbose_name='푸드명')
     affliction_effect_kind = models.JSONField(default=list, blank=True, null=True, verbose_name="긍정 효과 종류")
     incongruity_effect_kind = models.JSONField(default=list, blank=True, null=True, verbose_name="부정 효과 종류")
-    #allergy_effect_kind = models.JSONField(default=list, blank=True, null=True, verbose_name="부정 효과 종류")
+    allergy_effect_kind = models.JSONField(default=list, blank=True, null=True, verbose_name="부정 효과 종류")
     incongruity_kind = models.ManyToManyField(User_Incongruity, blank=True, verbose_name='부정효과 종류')
     allergy_kind = models.ManyToManyField(User_Allergy, blank=True, verbose_name='알러지 종류')
     affliction_kind = models.ManyToManyField(User_Affliction, blank=True, verbose_name='긍정효과 종류')
@@ -93,6 +94,8 @@ class User_Food_List(models.Model):
     food_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='식품군', null=True)
     
     user_food_list = models.ManyToManyField(Food_List, through='UserFoodPurchase', blank=True, verbose_name='사용자 푸드 리스트')
+    user_food_cnt_total = models.CharField(max_length=10, null=True, blank='Null', verbose_name='사용자 푸드 토털 카운트')
+    user_food_cnt_category = models.CharField(max_length=10, null=True, blank='Null', verbose_name='사용자 푸드 카테고리 카운트')
     
     def __str__(self):
         return str(self.user_id_c)
@@ -153,7 +156,7 @@ class Product_List(models.Model):
     product_url = models.CharField(max_length=255, blank=True, null=True, verbose_name='제품주소')
     product_kind = models.CharField(choices=Product_Kind, max_length=10, default='Null', verbose_name="제품종류" )
     product_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='카테고리', null=True)
-    market_id = models.ForeignKey(Food_Market, on_delete=models.SET_NULL,
+    market_id = models.CharField(choices=Product_Market, max_length=20,
                                     null=True, blank=True, verbose_name='마켓명')
     food_id = models.ManyToManyField(Food_List, blank=True, verbose_name='식품명')
     food_incongruity_info = models.ManyToManyField(User_Incongruity, blank=True, verbose_name='제품 부정 성분')

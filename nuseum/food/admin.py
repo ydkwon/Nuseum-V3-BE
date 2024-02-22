@@ -11,14 +11,15 @@ class FoodList(admin.ModelAdmin):
         'food_info',
         'food_ingredient',        
         'display_nutrokind',        
-        'food_code',
+        # 'food_code',
     )
     
     def display_nutrokind(self, obj):
         return ', '.join([str(nutro_kind) for nutro_kind in obj.nutro_name.all()])
     display_nutrokind.short_description = '성분내용'  # 필드 이름    
     
-    search_fields = ('food_category','food_name','food_info','food_code','food_priority','incongruity_info','display_nutrokind','food_ingredient')
+    # search_fields = ('food_category','food_name','food_info','food_priority','display_nutrokind','food_ingredient')
+    search_fields = ('food_name','food_info')
 
 class NutroName(admin.ModelAdmin):
     list_display = (
@@ -26,6 +27,7 @@ class NutroName(admin.ModelAdmin):
         'display_afflictions',
         'display_incongruity',
         'display_allergy',
+        'nutro_detail'
     )
 
     def display_afflictions(self, obj):
@@ -40,7 +42,7 @@ class NutroName(admin.ModelAdmin):
         return ', '.join([str(allergy) for allergy in obj.allergy_info.all()])
     display_allergy.short_description = '알러지'  # 필드 이름
 
-    search_fields = ('nutro_name','display_afflictions', 'display_incongruity', 'display_allergy')
+    search_fields = ('nutro_name','display_afflictions', 'display_incongruity', 'display_allergy','nutro_detail')
 
 @admin.register(Food_Effect)
 class FoodEffectAdmin(admin.ModelAdmin):
