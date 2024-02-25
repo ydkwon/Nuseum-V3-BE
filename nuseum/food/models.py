@@ -94,8 +94,6 @@ class User_Food_List(models.Model):
     food_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='식품군', null=True)
     
     user_food_list = models.ManyToManyField(Food_List, through='UserFoodPurchase', blank=True, verbose_name='사용자 푸드 리스트')
-    user_food_cnt_total = models.CharField(max_length=10, null=True, blank='Null', verbose_name='사용자 푸드 토털 카운트')
-    user_food_cnt_category = models.CharField(max_length=10, null=True, blank='Null', verbose_name='사용자 푸드 카테고리 카운트')
     
     def __str__(self):
         return str(self.user_id_c)

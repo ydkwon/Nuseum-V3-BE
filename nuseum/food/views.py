@@ -160,7 +160,7 @@ class User_Food_Recommend(APIView):
     def post(self, request):
         try:
             user_card_id = request.data.get('user_card')
-            user_food_lists = User_Food_List.objects.filter(user_id_c=user_card_id)
+            # user_food_lists = User_Food_List.objects.filter(user_id_c=user_card_id)
 
             with transaction.atomic():
                 # 사용자에 대한 기존의 모든 추천을 삭제합니다.
@@ -198,17 +198,36 @@ class User_Food_Recommend(APIView):
             result = User_Food_Recommend_List.objects.filter(user_id_c=user_card_id)
             response_data = {
                 'message': 'Success',
-                'detail': [
+                'details': [
                     {
-                        'food_id' : food_item.id,
-                        'food_category' : food_item.food_category,
-                        'food_priority' : food_item.food_priority,
-                        'food_name': food_item.food_name, 
-                        'nutro_kind': [nutro.nutro_name for nutro in food_item.nutro_name.all()]
+                        'food_id': food_item.id,
+                        'food_category': food_item.food_category,
+                        'food_priority': food_item.food_priority,
+                        'food_name': food_item.food_name,
+                        'nutro_names': [
+                            {
+                                'name': nutro.nutro_name,
+                                'incongruity': [incongruity.incongruity for incongruity in nutro.incongruity_info.all()],
+                                'allergy': [allergy.allergy for allergy in nutro.allergy_info.all()],
+                                'affliction': [affliction.affliction for affliction in nutro.affliction_info.all()],
+                                'detail': nutro.nutro_detail
+                            } for nutro in food_item.nutro_name.all()
+                        ]
                     } 
-                    for food_list in result 
+                    for food_list in result
                     for food_item in food_list.user_food_list.all()
                 ]
+                # 'detail': [
+                #     {
+                #         'food_id' : food_item.id,
+                #         'food_category' : food_item.food_category,
+                #         'food_priority' : food_item.food_priority,
+                #         'food_name': food_item.food_name, 
+                #         'nutro_kind': [nutro.nutro_name for nutro in food_item.nutro_name.all()]
+                #     } 
+                #     for food_list in result 
+                #     for food_item in food_list.user_food_list.all()
+                # ]
             }
 
             return Response(response_data, status=status.HTTP_200_OK)

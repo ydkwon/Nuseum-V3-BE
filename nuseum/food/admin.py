@@ -3,6 +3,52 @@ from .models import Food_List, Nutro_Name, Food_Effect, Food_Market, Product_Lis
 from .models import UserFoodPurchase, User_Food_Recommend_List, User_Product_Recommend_List
 from user_info.models import User_Incongruity, User_Affliction, User_Allergy
 
+from django.utils.translation import gettext_lazy as _
+from .choices import Food_Category  # Food_Category 임포트
+
+from django.utils.html import format_html
+from django.urls import reverse
+
+class FoodCategoryFilter(admin.SimpleListFilter):
+    title = _('food category')  # 필터 제목
+    parameter_name = 'food_category'  # URL에 사용될 쿼리스트링 파라미터
+
+    def lookups(self, request, model_admin):
+        # Food_Category에서 정의된 카테고리를 필터 옵션으로 제공
+        return Food_Category
+
+    def queryset(self, request, queryset):
+        # 선택된 필터 옵션에 따라 queryset 필터링
+        if self.value():
+            return queryset.filter(food_id__food_category=self.value())
+        return queryset
+
+class ProductList(admin.ModelAdmin):
+    list_display = (
+        'product_name',
+        'product_url',
+        'product_kind',
+        'product_category',
+        'market_id',
+        'display_foodid',
+    )
+    
+    def display_foodid(self, obj):
+        food_details = [f"{food.food_name} ({food.get_food_category_display()})" for food in obj.food_id.all()]
+        return ', '.join(food_details)
+    display_foodid.short_description = '식품명 및 식품군'
+
+    search_fields = ('product_name',)
+    list_filter = (FoodCategoryFilter,)  # 사용자 정의 필터 추가    
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        if db_field.name == "food_id":
+            # food_id 필드의 폼 필드를 커스터마이징합니다.
+            kwargs["queryset"] = Food_List.objects.order_by('food_category', 'food_name')
+            # 위 코드는 푸드 아이템을 'food_category'와 'food_name'에 따라 정렬합니다.
+            # 필요에 따라 여기에서 추가적인 필터링 로직을 적용할 수 있습니다.
+        return super().formfield_for_manytomany(db_field, request, **kwargs)
+
 class FoodList(admin.ModelAdmin):
     list_display = (
         'food_category',
@@ -19,6 +65,7 @@ class FoodList(admin.ModelAdmin):
     display_nutrokind.short_description = '성분내용'  # 필드 이름    
     
     # search_fields = ('food_category','food_name','food_info','food_priority','display_nutrokind','food_ingredient')
+    # search_fields = ('food_name','food_info')
     search_fields = ('food_name','food_info')
 
 class NutroName(admin.ModelAdmin):
@@ -78,37 +125,37 @@ class MarketName(admin.ModelAdmin):
     )
     search_fields = ('market_name',)
 
-class ProductList(admin.ModelAdmin):
-    list_display =(
-        'product_name',
-        'product_url',
-        'product_kind',
-        'product_category',
-        'market_id',
-        'display_foodid',
-    )
-    def display_foodid(self, obj):
-        return ', '.join([str(foodid) for foodid in obj.food_id.all()])
-    display_foodid.short_description = '식품명'  # 필드 이름
-
-    search_fields = ('product_name','product_url','product_kind','product_category','market_id','display_foodid')
+class UserFoodList(admin.ModelAdmin):
+    list_per_page = 10  # 한 페이지에 표시할 객체의 수
 
 class UserFoodPurchaseInline(admin.TabularInline):
     model = UserFoodPurchase
     extra = 1
 
 class UserFoodList(admin.ModelAdmin):
-    list_display = (
-        'user_id_c', 'food_category', 'display_user_food_list',
-    )
-    search_fields = ('user_id_c', 'food_category', 'user_food_list__food_name', 'user_food_use')
+    # inlines = [UserFoodPurchaseInline]
+    list_display = ('user_id_c', 'food_category', 'view_food_list_link')
 
-    inlines = [UserFoodPurchaseInline]
+    def view_food_list_link(self, obj):
+        return format_html('<a href="{}">푸드리스트 보기</a>', 
+                           reverse('admin:food_user_food_list_change', args=[obj.id]))
+    view_food_list_link.short_description = '푸드리스트 보기'
 
-    def display_user_food_list(self, obj):
-        return ", ".join([str(food) for food in obj.user_food_list.all()])
+# class UserFoodList(admin.ModelAdmin):
+#     # list_display = (
+#     #     'user_id_c', 'food_category', 'display_user_food_list',
+#     # )
+#     list_display = (
+#         'user_id_c', 'food_category',
+#     )
+#     search_fields = ('user_id_c', 'food_category', 'user_food_list__food_name', 'user_food_use')
 
-    display_user_food_list.short_description = '사용자 푸드 리스트'
+#     inlines = [UserFoodPurchaseInline]
+
+#     def display_user_food_list(self, obj):
+#         return ", ".join([str(food) for food in obj.user_food_list.all()])
+
+#     display_user_food_list.short_description = '사용자 푸드 리스트'
 
 class UserFoodRecommendListAdmin(admin.ModelAdmin):
     list_display = ('user_id_c', 'user_recommend_food_category', 'get_user_food_list')
