@@ -16,7 +16,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, Toke
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from .models import User_Food_List, Food_List, User_Food_Recommend_List, UserFoodPurchase, Product_List, User_Product_Recommend_List, Nutro_Name, Food_Effect
-from user_info.models import User_Card, User_Affliction, User_Incongruity
+from user_info.models import User_Card, User_Affliction, User_Incongruity, User_Allergy
 from account.models import User
 from django.db.models import Prefetch
 from django.db.models import Q
@@ -37,14 +37,31 @@ def get_user_pk_by_userid(userid):
 class User_Recommend_FoodList(APIView):
     def post(self, request):
         try:
+            user_id = request.data.get('user_id')
             user_card_id = request.data.get('user_card')
 
-            # User_Card 객체를 한 번만 조회
-            user_card = User_Card.objects.prefetch_related(
-                Prefetch('user_allergy'),
-                Prefetch('user_incongruity'),
-                Prefetch('user_affliction')
-            ).get(id=user_card_id)
+            if not user_card_id:
+                return JsonResponse({'message': 'user_card is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+            try:
+                user_card_id = int(user_card_id)  # user_card_id를 정수로 변환
+            except ValueError:
+                return JsonResponse({'message': 'Invalid user_card_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                user = User.objects.get(user_id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({'message': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                # User_Card 객체를 한 번만 조회하며, 해당 사용자에게 속해 있는지 확인
+                user_card = User_Card.objects.prefetch_related(
+                    'user_allergy',
+                    'user_incongruity',
+                    'user_affliction'
+                ).get(id=user_card_id, user_id_c=user)
+            except User_Card.DoesNotExist:
+                return JsonResponse({'message': 'Unauthorized: Card does not belong to the specified user'}, status=status.HTTP_400_BAD_REQUEST)
 
             user_allergy = user_card.user_allergy.all()
             user_incongruity = user_card.user_incongruity.all()
@@ -56,29 +73,51 @@ class User_Recommend_FoodList(APIView):
             ).exclude(
                 nutro_name__in=Nutro_Name.objects.filter(allergy_info__in=user_allergy)
             )
-
-            # 식품 리스트 관리를 위한 리스트 사용
-            accumulated_food_set = []
-
-            for affliction in user_afflictions:
-                food_list_for_affliction = food_list.filter(nutro_name__affliction_info=affliction)
-                # 중복 없이 추가하기 위해 extend 사용
-                # 이전에 accumulated_food_set이 리스트이므로, extend 메서드를 사용
-                accumulated_food_set.extend(food_list_for_affliction)
-
-            # 중복을 제거하고 최종 리스트 생성
-            # 리스트에서 중복 제거를 위해 set으로 변환 후 다시 list로 변환
-            accumulated_food_list = list(set(accumulated_food_set))
             
+            # 사용자에게 affliction 정보가 없다면, 모든 식품을 포함하도록 food_list를 조정합니다.
+            if not user_afflictions.exists():
+                accumulated_food_list = list(food_list)
+            else:
+                # 사용자에게 affliction이 있는 경우에는 해당 affliction에 맞는 식품을 필터링합니다.
+                accumulated_food_set = []
+                for affliction in user_afflictions:
+                    food_list_for_affliction = food_list.filter(nutro_name__affliction_info=affliction)
+                    accumulated_food_set.extend(food_list_for_affliction)
+                
+                # 중복을 제거하고 최종 리스트 생성
+                accumulated_food_list = list(set(accumulated_food_set))
+
             # 카테고리별 푸드 개수와 전체 푸드 개수를 저장할 딕셔너리
             category_food_counts = {}
             total_food_count = len(accumulated_food_list)
 
             with transaction.atomic():
+                # 기존에 저장된 사용자의 모든 푸드리스트를 제거
+                User_Food_List.objects.filter(user_id_c=user_card_id).delete()
+
+                # 카테고리별 푸드 정보를 저장할 딕셔너리 초기화
+                category_food_info = {}
 
                 for category_code, category_name in Food_Category:
                     category_food_list = [food for food in accumulated_food_list if food.food_category == category_code]
                     category_food_counts[category_code] = len(category_food_list)
+
+                    # 해당 카테고리의 푸드 정보를 담을 리스트 초기화
+                    food_info_list = []
+
+                    for food in category_food_list:
+                        # 각 푸드의 정보(이름과 ID)를 딕셔너리 형태로 추가
+                        food_info = {
+                            'food_id': food.id,
+                            'food_name': food.food_name
+                        }
+                        food_info_list.append(food_info)
+                    
+                    # 카테고리별로 푸드 정보 저장
+                    category_food_info[category_code] = {
+                        'total_food_count': len(category_food_list),
+                        'foods': food_info_list
+                    }
 
                     if category_food_list:
                         existing_user_food_list = User_Food_List.objects.filter(
@@ -96,71 +135,45 @@ class User_Recommend_FoodList(APIView):
                             existing_user_food_list.user_food_list.clear()
                             existing_user_food_list.user_food_list.add(*category_food_list)
 
-            # 카테고리별 푸드 개수와 전체 푸드 개수 반환
+            # 카테고리별 푸드 정보를 응답 데이터에 포함
             response_data = {
                 'message': 'Success',
-                'total_food_count': total_food_count,
-                'category_food_counts': category_food_counts
+                'user_card_id': user_card_id,
+                'category_food_info': category_food_info
             }
+
+            # # 카테고리별 푸드 개수와 전체 푸드 개수 반환
+            # response_data = {
+            #     'message': 'Success',
+            #     'user_card_id' : user_card_id,
+            #     'total_food_count': total_food_count,
+            #     'category_food_counts': category_food_counts
+            # }
             return Response(response_data, status=status.HTTP_200_OK)
         
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
-
-# class User_Food_Recommend(APIView):
-#     def post(self, request):
-#         try:
-#             user_card_id = request.data.get('user_card')
-#             user_food_lists = User_Food_List.objects.filter(user_id_c=user_card_id)
-
-#             with transaction.atomic():
-#                  # 사용자에 대한 기존의 모든 추천을 삭제합니다.
-#                 User_Food_Recommend_List.objects.filter(user_id_c=user_card_id).delete()
-
-#                 # 각 카테고리별로 랜덤하게 식품 추천
-#                 for category_code, category_name in Food_Category:
-#                     # 각 카테고리별 우선순위에 따라 랜덤 선택 로직
-#                     priorities = priority_rules.get(category_code, [])
-#                     selected_food_id = None
-
-#                     for priority in priorities:
-#                         priority_foods = UserFoodPurchase.objects.filter(
-#                             user_food_list__user_id_c=user_card_id,
-#                             food__food_priority=priority,
-#                             user_food_use=False  # 사용되지 않은 푸드만 고려
-#                         ).values_list('food_id', flat=True).distinct()
-
-#                         if priority_foods:
-#                             selected_food_id = random.choice(priority_foods)
-#                             break  # 하나만 선택
-
-#                     if selected_food_id:
-#                         # 새로운 추천 리스트를 생성하고 선택된 식품 ID를 추가합니다.
-#                         recommend_list = User_Food_Recommend_List.objects.create(
-#                             user_id_c=User_Card.objects.get(id=user_card_id),
-#                             user_recommend_food_category=category_code,
-#                         )
-#                         recommend_list.user_food_list.add(selected_food_id)
-
-#             # 최종 추천된 식품 리스트 반환
-#             result = User_Food_Recommend_List.objects.filter(user_id_c=user_card_id)
-#             response_data = {
-#                 'message': 'Success',
-#                 'detail': [{'food_name': food_item.food_name, 'nutro_kind': [nutro.nutro_name for nutro in food_item.nutro_name.all()]} for food_list in result for food_item in food_list.user_food_list.all()]
-#             }
-
-#             return Response(response_data, status=status.HTTP_200_OK)
-
-#         except KeyError:
-#             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
 MAX_RECOMMENDATIONS_PER_PRIORITY = 4
 
 class User_Food_Recommend(APIView):
     def post(self, request):
         try:
+            user_id = request.data.get('user_id')
             user_card_id = request.data.get('user_card')
-            # user_food_lists = User_Food_List.objects.filter(user_id_c=user_card_id)
+
+            if not user_card_id:
+                return JsonResponse({'message': 'user_card is required'}, status=status.HTTP_400_BAD_REQUEST)        
+
+            try:
+                user_card_id = int(user_card_id)  # user_card_id를 정수로 변환
+            except ValueError:
+                return JsonResponse({'message': 'Invalid user_card_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                user = User.objects.get(user_id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({'message': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
 
             with transaction.atomic():
                 # 사용자에 대한 기존의 모든 추천을 삭제합니다.
@@ -217,17 +230,6 @@ class User_Food_Recommend(APIView):
                     for food_list in result
                     for food_item in food_list.user_food_list.all()
                 ]
-                # 'detail': [
-                #     {
-                #         'food_id' : food_item.id,
-                #         'food_category' : food_item.food_category,
-                #         'food_priority' : food_item.food_priority,
-                #         'food_name': food_item.food_name, 
-                #         'nutro_kind': [nutro.nutro_name for nutro in food_item.nutro_name.all()]
-                #     } 
-                #     for food_list in result 
-                #     for food_item in food_list.user_food_list.all()
-                # ]
             }
 
             return Response(response_data, status=status.HTTP_200_OK)
@@ -247,6 +249,9 @@ class Food_Effect_Set(APIView):
 
     def post(self, request):
         try:
+            # 기존 Food_Effect 인스턴스 삭제
+            Food_Effect.objects.all().delete()
+
             # Food_List 모델에서 모든 데이터 가져오기
             food_list_items = Food_List.objects.all()
 
@@ -256,36 +261,44 @@ class Food_Effect_Set(APIView):
             # 각 Food_List 아이템에 대해 Food_Effect 인스턴스 생성 및 리스트에 추가
             for food_list_item in food_list_items:
 
-                # 변수 초기화
+               # 변수 초기화
                 affliction_effects_raw = list(food_list_item.nutro_name.all().values_list('affliction_info', flat=True))
                 incongruity_effects_raw = list(food_list_item.nutro_name.all().values_list('incongruity_info', flat=True))
+                allergy_effects_raw = list(food_list_item.nutro_name.all().values_list('allergy_info', flat=True))  # 알러지 정보 추가
 
-                # 디버깅을 위한 출력
+                 # 디버깅을 위한 출력
                 print(f"Affliction Effects Raw: {affliction_effects_raw}")
                 print(f"Incongruity Effects Raw: {incongruity_effects_raw}")
-
-                # 숫자에 대응하는 User_Affliction 객체를 가져와서 리스트에 저장
-                # affliction_effects = [get_user_affliction_by_number(number) for number in affliction_effects_raw if number is not None]
-                
-                # JSON으로 변환 가능한 형태로 데이터 변환
-                # affliction_effects_data = [{'affliction': affliction.affliction, 'affliction_detail': affliction.affliction_detail} for affliction in affliction_effects if affliction is not None]
-                # affliction_effects_json = json.dumps(affliction_effects_data, cls=DjangoJSONEncoder)
+                print(f"Allergy Effects Raw: {allergy_effects_raw}")  # 알러지 정보 출력
 
                 # 중첩된 리스트를 펼쳐서 flatten
                 affliction_effects = [item for sublist in affliction_effects_raw for item in (sublist if isinstance(sublist, (list, tuple)) else [sublist]) if item is not None]
                 incongruity_effects = [item for sublist in incongruity_effects_raw for item in (sublist if isinstance(sublist, (list, tuple)) else [sublist]) if item is not None]
+                allergy_effects = [item for sublist in allergy_effects_raw for item in (sublist if isinstance(sublist, (list, tuple)) else [sublist]) if item is not None]  # 알러지 정보 처리
                 
-                print(f"Affliction Effects: {affliction_effects}")
-
                 food_effect_instance = Food_Effect(
                     food_name=food_list_item,
-                    affliction_effect_kind=list(affliction_effects),                    
-                    incongruity_effect_kind=list(incongruity_effects)
+                    affliction_effect_kind=list(affliction_effects),
+                    incongruity_effect_kind=list(incongruity_effects),
+                    allergy_effect_kind=list(allergy_effects)  # 알러지 효과 추가
                 )
                 food_effect_instances.append(food_effect_instance)
 
             # Bulk create를 사용하여 여러 Food_Effect 인스턴스를 한 번에 저장
             Food_Effect.objects.bulk_create(food_effect_instances)
+
+            # # ManyToMany 관계 설정
+            # # 예시: User_Affliction, User_Incongruity, User_Allergy 모델 인스턴스를 얻는 방법
+            # # 실제로는 affliction_effects, incongruity_effects, allergy_effects를 기반으로 적절한 모델 인스턴스를 조회해야 함
+            # # 예를 들어, affliction_effects가 모델의 ID 목록이라고 가정
+            # affliction_instances = User_Affliction.objects.filter(id__in=affliction_effects)
+            # incongruity_instances = User_Incongruity.objects.filter(id__in=incongruity_effects)
+            # allergy_instances = User_Allergy.objects.filter(id__in=allergy_effects)
+
+            # # ManyToManyField에 인스턴스 추가
+            # food_effect_instance.affliction_kind.set(affliction_instances)
+            # food_effect_instance.incongruity_kind.set(incongruity_instances)
+            # food_effect_instance.allergy_kind.set(allergy_instances)
 
             return Response({'message': '음식 효과가 성공적으로 생성되었습니다.'}, status=status.HTTP_201_CREATED)
 
@@ -328,7 +341,25 @@ class Food_Use_Set(APIView):
 class User_Recommend_ProductList(APIView):
     def post(self, request):
         try:
-            user_card_id = request.data.get('user_card')   
+            user_id = request.data.get('user_id')
+            user_card_id = request.data.get('user_card')
+
+            if not user_card_id:
+                return JsonResponse({'message': 'user_card is required'}, status=status.HTTP_400_BAD_REQUEST)        
+
+            try:
+                user_card_id = int(user_card_id)  # user_card_id를 정수로 변환
+            except ValueError:
+                return JsonResponse({'message': 'Invalid user_card_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                user = User.objects.get(user_id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({'message': 'User not found'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # 조회된 사용자 객체와 카드 ID를 사용하여 User_Card 객체 조회
+            if not User_Card.objects.filter(id=user_card_id, user_id_c=user).exists():
+                return JsonResponse({'message': 'Unauthorized: Card does not belong to the specified user'}, status=status.HTTP_403_FORBIDDEN)
 
             with transaction.atomic():
                 # User_Food_Recommend_List에서 해당 사용자의 추천 음식 리스트 조회
@@ -339,22 +370,6 @@ class User_Recommend_ProductList(APIView):
                 # User_Product_Recommend_List의 기존 추천을 삭제
                 User_Product_Recommend_List.objects.filter(user_id_c=user_card_id).delete()
 
-                # 각 추천된 음식에 대해 무작위로 하나의 제품을 추천
-                # for food_recommendation in food_recommendations:
-                #     for food in food_recommendation.user_food_list.all():
-                #         # Product_List에서 해당 음식이 있는 제품을 무작위로 하나 선택
-                #         product_with_food = Product_List.objects.filter(
-                #             food_id=food.id
-                #         ).order_by('?').first()  # 무작위로 하나의 제품만을 선택
-                        
-                #         # 찾은 제품을 User_Product_Recommend_List에 저장
-                #         if product_with_food:
-                #             User_Product_Recommend_List.objects.create(
-                #                 user_id_c=User_Card.objects.get(id=user_card_id),
-                #                 rec_product_category=product_with_food.product_category,
-                #                 rec_product_name=product_with_food
-                #             )
-                
                 # 각 추천된 음식에 대해 무작위로 하나의 제품을 추천
                 for food_recommendation in food_recommendations:
                     food_category = food_recommendation.user_recommend_food_category  # 푸드 카테고리 정보
@@ -367,55 +382,109 @@ class User_Recommend_ProductList(APIView):
                         # 제품이 있으면 무작위로 하나의 제품을 선택하여 저장
                         if products_with_food:
                             selected_product = random.choice(products_with_food)
+                            print("user_card_id",user_card_id)
                             User_Product_Recommend_List.objects.create(
                                 user_id_c=User_Card.objects.get(id=user_card_id),
                                 rec_product_category= food_category,
                                 # rec_product_category=selected_product.product_category
                                 rec_product_name=selected_product
                             )
+            # 사용자의 카드 ID에 맞는 제품 추천 목록만 조회합니다.
+            recommendations = User_Product_Recommend_List.objects.filter(user_id_c=user_card_id).select_related('rec_product_name').prefetch_related('rec_product_name__food_id')
+
+            detail = []
+            for rec in recommendations:
+                product = rec.rec_product_name
+                if product:
+                    # 연결된 모든 식품명을 조회합니다.
+                    food_names = [food.food_name for food in product.food_id.all()]  # 여기서 수정됨
+                    product_detail = {
+                        'id': rec.id,
+                        'rec_product_category': rec.rec_product_category,
+                        'user_id_c': rec.user_id_c_id,
+                        'rec_product_id': product.id,
+                        'rec_product_name': product.product_name,
+                        'rec_product_url': product.product_url,
+                        'food_names': food_names,  # 제품에 연결된 식품명 목록을 응답에 추가
+                    }
+                    detail.append(product_detail)
             
-            result = User_Product_Recommend_List.objects.all()
-            serializer = UserProductRecListSerializer(result, many=True)  # 직렬화 클래스 사용
-            
-            return Response(
+            return JsonResponse(
                 {
                     'message': 'Success',
-                    "code" : "0000",
-                    "detail" : serializer.data
-                }, 
+                    "code": "0000",
+                    "detail": detail
+                },
                 status=status.HTTP_200_OK
             )
-
+        
         except KeyError:
             return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
 
 class UserProductRecommendDetailAPIView(APIView):
     def post(self, request, product_id):
         try:
-             # try 블록 내에서 Product_List 객체를 가져옵니다.
             try:
                 product = Product_List.objects.get(id=product_id)
+                # 제품에 연결된 식품명을 가져옵니다.
+                food_names = product.food_id.all().values_list('food_name', flat=True)
             except Product_List.DoesNotExist:
-                # Product_List 객체가 존재하지 않으면 오류 메시지를 반환합니다.
-                return Response(
+                return JsonResponse(
                     {
                         'message': 'Product not found',
-                        "code": "0001"  # 적절한 오류 코드를 지정합니다.
+                        "code": "0001"
                     },
-                    status=status.HTTP_404_NOT_FOUND
+                    status=status.HTTP_400_BAD_REQUEST
                 )
+            
+            # 제품 정보와 연결된 식품명을 응답 데이터로 구성합니다.
+            product_detail = {
+                'product_id': product.id,
+                'product_name': product.product_name,
+                'product_url': product.product_url,
+                'product_kind': product.product_kind,
+                'product_category': product.product_category,
+                'market_id': product.market_id,
+                'food_names': list(food_names),  # 식품명 목록을 리스트로 변환하여 추가
+            }
 
-            # 이제 해당 제품을 직렬화하여 JSON 응답으로 반환
-            serializer = ProductListSerializer(product)
-
-            return Response(
+            return JsonResponse(
                 {
                     'message': 'Success',
                     "code" : "0000",
-                    "detail" : serializer.data
+                    "detail" : product_detail
                 }, 
                 status=status.HTTP_200_OK
             )
 
         except KeyError:
-            return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)    
+            return JsonResponse({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)
+    # def post(self, request, product_id):
+    #     try:
+    #          # try 블록 내에서 Product_List 객체를 가져옵니다.
+    #         try:
+    #             product = Product_List.objects.get(id=product_id)
+    #         except Product_List.DoesNotExist:
+    #             # Product_List 객체가 존재하지 않으면 오류 메시지를 반환합니다.
+    #             return Response(
+    #                 {
+    #                     'message': 'Product not found',
+    #                     "code": "0001"  # 적절한 오류 코드를 지정합니다.
+    #                 },
+    #                 status=status.HTTP_400_BAD_REQUEST
+    #             )
+
+    #         # 이제 해당 제품을 직렬화하여 JSON 응답으로 반환
+    #         serializer = ProductListSerializer(product)
+
+    #         return Response(
+    #             {
+    #                 'message': 'Success',
+    #                 "code" : "0000",
+    #                 "detail" : serializer.data
+    #             }, 
+    #             status=status.HTTP_200_OK
+    #         )
+
+    #     except KeyError:
+    #         return Response({'message': 'Bad Request'}, status=status.HTTP_400_BAD_REQUEST)    

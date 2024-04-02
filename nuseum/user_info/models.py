@@ -5,7 +5,7 @@ from django.db import models
 class User_Affliction(models.Model):
     affliction = models.CharField(max_length=200, default='None', verbose_name='긍정')
     affliction_id = models.CharField(max_length=10, verbose_name = '긍정항목 id', default='None')
-    affliction_detail = models.CharField(max_length=200, verbose_name='긍정 상세',default='None') 
+    affliction_detail = models.CharField(max_length=1000, verbose_name='긍정 상세',default='None') 
 
     def __str__(self):
         return str(self.affliction)
@@ -22,7 +22,7 @@ class User_Affliction(models.Model):
 class User_Incongruity(models.Model):
     incongruity = models.CharField(max_length=100, verbose_name="부정", default='None')
     incongruity_id = models.CharField(max_length=10, verbose_name = '부정항목 id', default='None')
-    incongruity_detail = models.CharField(max_length=200, verbose_name='부정 상세',default='None') 
+    incongruity_detail = models.CharField(max_length=1000, verbose_name='부정 상세',default='None') 
 
     def __str__(self):
         return str(self.incongruity)
@@ -39,7 +39,7 @@ class User_Incongruity(models.Model):
 class User_Allergy(models.Model):
     allergy = models.CharField(max_length=100, verbose_name="알러지", default='None')
     allergy_id = models.CharField(max_length=10, verbose_name = '알러지 id', default='None')
-    allergy_detail = models.CharField(max_length=200, verbose_name='알러지 상세',default='None') 
+    allergy_detail = models.CharField(max_length=1000, verbose_name='알러지 상세',default='None') 
 
     def __str__(self):
         return str(self.allergy)
@@ -54,7 +54,7 @@ class User_Allergy(models.Model):
         super().save(*args, **kwargs)
 
 class User_Card(models.Model):
-    user_id_c = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name='아이디')
+    user_id_c = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, verbose_name='아이디')
     
     card_nickname = models.CharField(max_length=10, verbose_name="카드 닉네임", null=True)
     card_id = models.CharField(max_length=10, verbose_name = '카드 id', default='None')

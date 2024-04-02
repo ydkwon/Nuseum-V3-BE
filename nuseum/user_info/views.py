@@ -67,52 +67,42 @@ class UserInfo_Post(APIView):
                     # ManyToMany 필드 설정 for allergy
                     if user_allergy_instances.exists():
                         user_info.user_allergy.set(user_allergy_instances)
-                    else:
-                        # user_incongruity 데이터가 유효하지 않은 경우 처리
-                        return Response(
-                            {
-                                "code": "1019",
-                                "message": "Invalid user_allergy data based on allergy_id",
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+                    # else:
+                    #     # user_incongruity 데이터가 유효하지 않은 경우 처리
+                    #     return Response(
+                    #         {
+                    #             "code": "1019",
+                    #             "message": "Invalid user_allergy data based on allergy_id",
+                    #         },
+                    #         status=status.HTTP_400_BAD_REQUEST,
+                    #     )
 
                     # ManyToMany 필드 설정 for incongruity
                     if user_incongruity_instances.exists():
                         user_info.user_incongruity.set(user_incongruity_instances)
-                    else:
-                        # user_incongruity 데이터가 유효하지 않은 경우 처리
-                        return Response(
-                            {
-                                "code": "1017",
-                                "message": "Invalid user_incongruity data based on incongruity_id",
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+                    # else:
+                    #     # user_incongruity 데이터가 유효하지 않은 경우 처리
+                    #     return Response(
+                    #         {
+                    #             "code": "1017",
+                    #             "message": "Invalid user_incongruity data based on incongruity_id",
+                    #         },
+                    #         status=status.HTTP_400_BAD_REQUEST,
+                    #     )
                     
                     # ManyToMany 필드 설정 for affliction
                     if user_affliction_instances.exists():
                         user_info.user_affliction.set(user_affliction_instances)
                         print('User affliction Set')
-                    else:
-                        # user_incongruity 데이터가 유효하지 않은 경우 처리
-                        return Response(
-                            {
-                                "code": "1018",
-                                "message": "Invalid user_affliction data based on affliction_id",
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-                    
-                    # user_allergy 및 user_affliction 데이터 처리
-                    # user_allergy_data = request.data.get('user_allergy', [])
-                    # user_incongruity_data = request.data.get('user_incongruity',[])
-                    # user_affliction_data = request.data.get('user_affliction', [])
-                    
-                    # user_allergy 및 user_affliction를 user_info에 연결
-                    # user_info.user_allergy.set(user_allergy_data)
-                    # user_info.user_incongruity.set(user_incongruity_data)
-                    # user_info.user_affliction.set(user_affliction_data)
+                    # else:
+                    #     # user_incongruity 데이터가 유효하지 않은 경우 처리
+                    #     return Response(
+                    #         {
+                    #             "code": "1018",
+                    #             "message": "Invalid user_affliction data based on affliction_id",
+                    #         },
+                    #         status=status.HTTP_400_BAD_REQUEST,
+                    #     )                    
 
                     return Response(
                         {
@@ -232,50 +222,42 @@ class UserInfo_Update(APIView):
                     # ManyToMany 필드 설정 for allergy
                     if user_allergy_instances.exists():
                         user_info.user_allergy.set(user_allergy_instances)
-                    else:
-                        # user_incongruity 데이터가 유효하지 않은 경우 처리
-                        return Response(
-                            {
-                                "code": "1019",
-                                "message": "Invalid user_allergy data based on allergy_id",
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+                    # else:
+                    #     # user_incongruity 데이터가 유효하지 않은 경우 처리
+                    #     return Response(
+                    #         {
+                    #             "code": "1019",
+                    #             "message": "Invalid user_allergy data based on allergy_id",
+                    #         },
+                    #         status=status.HTTP_400_BAD_REQUEST,
+                    #     )
 
                     # ManyToMany 필드 설정 for incongruity
                     if user_incongruity_instances.exists():
                         user_info.user_incongruity.set(user_incongruity_instances)
-                    else:
-                        # user_incongruity 데이터가 유효하지 않은 경우 처리
-                        return Response(
-                            {
-                                "code": "1017",
-                                "message": "Invalid user_incongruity data based on incongruity_id",
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
+                    # else:
+                    #     # user_incongruity 데이터가 유효하지 않은 경우 처리
+                    #     return Response(
+                    #         {
+                    #             "code": "1017",
+                    #             "message": "Invalid user_incongruity data based on incongruity_id",
+                    #         },
+                    #         status=status.HTTP_400_BAD_REQUEST,
+                    #     )
                     
                     # ManyToMany 필드 설정 for affliction
                     if user_affliction_instances.exists():
                         user_info.user_affliction.set(user_affliction_instances)
                         print('User affliction Set')
-                    else:
-                        # user_incongruity 데이터가 유효하지 않은 경우 처리
-                        return Response(
-                            {
-                                "code": "1018",
-                                "message": "Invalid user_affliction data based on affliction_id",
-                            },
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
-
-                    # user_allergy 및 user_affliction 데이터 처리
-                    # user_allergy_data = request.data.get('user_allergy', [])
-                    # user_affliction_data = request.data.get('user_affliction', [])
-                    
-                    # user_allergy 및 user_affliction를 user_info에 연결
-                    # user_info.user_allergy.set(user_allergy_data)
-                    # user_info.user_affliction.set(user_affliction_data)
+                    # else:
+                    #     # user_incongruity 데이터가 유효하지 않은 경우 처리
+                    #     return Response(
+                    #         {
+                    #             "code": "1018",
+                    #             "message": "Invalid user_affliction data based on affliction_id",
+                    #         },
+                    #         status=status.HTTP_400_BAD_REQUEST,
+                    #     )
 
                     return Response(
                         {

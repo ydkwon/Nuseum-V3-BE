@@ -110,24 +110,25 @@ WSGI_APPLICATION = 'nuseum.wsgi.application'
 #     }
 # }
 
+# Test Server
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'nuseum',
-#         'USER' : 'root',
-#         'PASSWORD' : '12345678',
-#         'HOST' : 'localhost',
-#         'PORT' : '3306',
+#         'NAME': 'dbilium',
+#         'USER' : 'ilium',
+#         'PASSWORD' : 'ilium1004!',
+#         'HOST' : 'db.ilium.co.kr',
+#         'PORT' : '3306',        
 #     }
 # }
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'dbilium',
-        'USER' : 'ilium',
-        'PASSWORD' : 'ilium1004!',
-        'HOST' : 'db.ilium.co.kr',
+        'NAME': 'dbnuseum',
+        'USER' : 'nuseum',
+        'PASSWORD' : 'nuseum1004',
+        'HOST' : 'db.nuseum.pe.kr',
         'PORT' : '3306',        
     }
 }
@@ -239,7 +240,6 @@ LOGOUT_REDIRECT_URL = '/'
 AUTH_USER_MODEL = "account.User"
 
 # Social login
-
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',

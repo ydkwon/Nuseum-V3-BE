@@ -90,7 +90,7 @@ class Food_Market(models.Model):
         super().save(*args, **kwargs)
 
 class User_Food_List(models.Model):
-    user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
+    user_id_c = models.ForeignKey(User_Card, on_delete=models.CASCADE, null=True, verbose_name='사용자')
     food_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='식품군', null=True)
     
     user_food_list = models.ManyToManyField(Food_List, through='UserFoodPurchase', blank=True, verbose_name='사용자 푸드 리스트')
@@ -133,7 +133,7 @@ class UserFoodPurchase(models.Model):
         super().save(*args, **kwargs)
 
 class User_Food_Recommend_List(models.Model):
-    user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
+    user_id_c = models.ForeignKey(User_Card, on_delete=models.CASCADE, null=True, verbose_name='사용자')
     user_recommend_food_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='식품군', null=True)
     user_food_list = models.ManyToManyField(Food_List, blank=True, verbose_name='사용자 추천 푸드 리스트')                                       
 
@@ -173,7 +173,7 @@ class Product_List(models.Model):
         super().save(*args, **kwargs)
 
 class User_Product_Recommend_List(models.Model):
-    user_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
+    user_id_c = models.ForeignKey(User_Card, on_delete=models.CASCADE, null=True, verbose_name='사용자')
     rec_product_category = models.CharField(choices=Food_Category, max_length=50, verbose_name='카테고리', null=True)
     rec_product_name = models.ForeignKey(Product_List, on_delete=models.SET_NULL, 
                                        null=True, blank=True, verbose_name='사용자 추천 제품 리스트')

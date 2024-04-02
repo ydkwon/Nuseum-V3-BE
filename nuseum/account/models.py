@@ -10,22 +10,21 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, user_id, password, hp, auth, user_email, **extra_fields):
+    def create_user(self, user_id, password, hp, auth, **extra_fields):
         if not user_id:
             raise ValueError('사용자 ID는 필수입니다.')
         user = self.model(
             user_id = user_id,
             hp = hp,
-            auth = auth,
-            user_email = user_email,             
+            auth = auth,                         
             **extra_fields
         )
         user.set_password(password)        
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, user_id, password=None, hp=None, auth=None, user_email=None, **extra_fields):
-        user = self.create_user(user_id, password, hp, auth, user_email)
+    def create_superuser(self, user_id, password=None, hp=None, auth=None, **extra_fields):
+        user = self.create_user(user_id, password, hp, auth)
         user.is_superuser = True
         user.is_admin = True
         user.is_staff = True

@@ -6,7 +6,7 @@ from food.models import Food_List
 from django.utils import timezone
 
 class User_Record_list(models.Model):
-    user_card_id_c = models.ForeignKey(User_Card, on_delete=models.SET_NULL, null=True, verbose_name='사용자')
+    user_card_id_c = models.ForeignKey(User_Card, on_delete=models.CASCADE, null=True, verbose_name='사용자')
     record_date = models.DateField(blank=True, null=True, default=timezone.now)
     foods = models.ManyToManyField(Food_List, blank=True, verbose_name='푸드명')  # 다대다 관계 설정
 
